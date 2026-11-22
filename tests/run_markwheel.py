@@ -29,7 +29,7 @@ except ImportError:
     sys.exit("Needs lupa: pip install lupa")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ADDON = os.path.join(os.path.dirname(HERE), "MarkWheel")
+ADDON = os.path.dirname(HERE)
 
 WOW_STUB = r"""
 local function noop() end

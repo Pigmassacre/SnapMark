@@ -24,7 +24,7 @@ import struct
 from PIL import Image, ImageDraw, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(os.path.dirname(HERE), "MarkWheel", "Media")
+OUT = os.path.join(os.path.dirname(HERE), "Media")
 
 R_IN, R_OUT, RING_SPAN = 36, 116, 248  # in UI units, as in Wheel.lua
 SIZE = 512

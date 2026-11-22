@@ -1,7 +1,8 @@
 ## Interface: 16001
 ## Title: MarkWheel
 ## Notes: Hold a key, flick toward a target marker and let go. The direction picks the marker, so overshooting never misses. Works in and out of combat.
-## Version: 0.1.0
+## Version: @project-version@
+## X-License: MIT
 ## SavedVariables: MarkWheelDB
 ## IconTexture: Interface\AddOns\MarkWheel\Media\icon
 ## AddonCompartmentFunc: MarkWheel_OnAddonCompartmentClick

@@ -1,0 +1,6 @@
+package-as: MarkWheel
+
+ignore:
+  - tests
+  - tools
+  - README.md

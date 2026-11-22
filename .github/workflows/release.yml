@@ -1,0 +1,23 @@
+name: Release
+
+# Push a tag like v0.2.0 to build the addon's zip and publish it as a GitHub release.
+# To also upload to CurseForge or Wago, add the project id to the .toc (## X-Curse-Project-ID / ## X-Wago-ID)
+# and the CF_API_KEY / WAGO_API_TOKEN secrets to this repository.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: BigWigsMods/packager@v2
