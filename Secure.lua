@@ -42,6 +42,8 @@ local ON_CLICK = [[
     if down then
         self:SetAttribute("type", nil)
         self:SetAttribute("typerelease", nil)
+        local targetNow = self:GetAttribute("mw-targetnow")
+        self:SetAttribute("mw-targetnow", nil)
         if PlayerInCombat() then self:SetAttribute("mw-unit", nil) end
         pad:ClearAllPoints()
         pad:SetPoint("CENTER", "$cursor", 0, 0)
@@ -49,8 +51,9 @@ local ON_CLICK = [[
         self:SetBindingClick(true, "ESCAPE", self, "Cancel")
         self:SetBindingClick(true, "BUTTON2", self, "Cancel")
         local first = false
-        if PlayerInCombat() and self:GetAttribute("mw-mode") == "point"
-            and self:GetAttribute("mw-combat") == "targetfirst" and UnitExists("mouseover") then
+        local inFight = PlayerInCombat() and self:GetAttribute("mw-mode") == "point"
+            and self:GetAttribute("mw-combat") == "targetfirst"
+        if (targetNow or inFight) and UnitExists("mouseover") then
             self:SetAttribute("unit", "mouseover")
             self:SetAttribute("type", "target")
             first = true
@@ -164,21 +167,36 @@ local function plateToken(plate)
     if type(token) == "string" and token:match("^nameplate%d+$") then return token end
 end
 
+-- The nameplate token of what the pointer is on, when it's pointing at the body rather than the plate.
+local function plateByComparing()
+    for i = 1, 40 do
+        local token = "nameplate" .. i
+        if ns.read(UnitExists, token) and ns.read(UnitIsUnit, "mouseover", token) == true then return token end
+    end
+end
+
 -- What the pointer is on, as something that can be found again when the key comes up. nil: nothing.
+-- targetNow: there is no way to find it again (no readable ID, no nameplate), so the key targets it as it goes down.
 function Secure.capture()
     if not ns.read(UnitExists, "mouseover") then return nil end
     local c = { guid = ns.read(UnitGUID, "mouseover"), isTarget = ns.read(UnitIsUnit, "mouseover", "target"),
         targetSerial = targetSerial }
     if C_NamePlate and C_NamePlate.GetNamePlateForUnit then
         local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, "mouseover")
-        if ok and type(plate) == "table" then
-            local token = plateToken(plate)
+        local token = ok and type(plate) == "table" and plateToken(plate) or nil
+        if not token then
+            token = plateByComparing()
             if token then
-                if not plateSerial[token] then serial = serial + 1 plateSerial[token] = serial end
-                c.plate, c.token, c.serial = plate, token, plateSerial[token]
+                local okP, p = pcall(C_NamePlate.GetNamePlateForUnit, token)
+                plate = okP and p or nil
             end
         end
+        if token and type(plate) == "table" then
+            if not plateSerial[token] then serial = serial + 1 plateSerial[token] = serial end
+            c.plate, c.token, c.serial = plate, token, plateSerial[token]
+        end
     end
+    c.targetNow = not c.plate and not c.guid and not c.isTarget
     return c
 end
 
@@ -261,9 +279,15 @@ function Secure.setup()
         if which == "Cancel" then return end
         if down then
             Secure.pointed = Secure.capture()
-            if not InCombatLockdown() then self:SetAttribute("mw-unit", nil) end
+            if not InCombatLockdown() then
+                self:SetAttribute("mw-unit", nil)
+                self:SetAttribute("mw-targetnow",
+                    (ns.db.mode == "point" and Secure.pointed and Secure.pointed.targetNow) and true or nil)
+            end
         elseif not InCombatLockdown() and ns.db.mode == "point" and Secure.pointed then
-            self:SetAttribute("mw-unit", Secure.resolve(Secure.pointed) or "lost")
+            -- Targeted as the key went down: mark the target.
+            local unit = Secure.pointed.targetNow and "target" or Secure.resolve(Secure.pointed)
+            self:SetAttribute("mw-unit", unit or "lost")
         end
     end)
 

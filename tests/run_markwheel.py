@@ -583,7 +583,17 @@ SettingsPanel.GetLayout = function() return { AddInitializer = function(_, init)
 CreateSettingsButtonInitializer = function(name, text, onClick, tooltip)
     local init = { data = { name = name, buttonText = text, buttonClick = onClick, tooltip = tooltip } }
     function init:GetData() return self.data end
+    -- The page builds a row for it: a frame with a Button that shows the text.
+    function init:InitFrame(frame) frame.Button._text = self.data.buttonText end
     return init
+end
+-- A row the settings page built, with its button.
+function settingsRow(init)
+    local frame = { Button = { _text = nil } }
+    function frame.Button:GetText() return self._text end
+    function frame.Button:SetText(t) self._text = t end
+    init:InitFrame(frame)
+    return frame
 end
 """
 
@@ -721,7 +731,7 @@ fresh()
 world.mouseover = mage
 flick(800, 500, 0, -150, { pointAt = mage, leave = false, midway = function() removePlate("nameplate3") end })
 check(marks[mage] == nil and marks[skull] == nil, "nothing should be marked when it is gone")
-check(uiErrors[#uiErrors] and uiErrors[#uiErrors]:find("Can't find"), "and the game's error line should say why")
+check(uiErrors[#uiErrors] and uiErrors[#uiErrors]:find("went out of sight"), "and the game's error line should say why")
 -- Target mode ignores the pointer
 fresh()
 ns.set("mode", "target")
@@ -838,6 +848,20 @@ secretMode = true
 flick(800, 500, 0, 100, { pointAt = brute })
 noErrors("hidden values")
 check(marks[brute] == 8, "marks what you pointed at by its nameplate when its GUID is hidden")
+-- Pointing at a body that has no nameplate, its GUID hidden: the key targets it as it goes down, then marks it.
+local looter = { guid = "Creature-9", name = "Defias Looter", mob = true }
+local targetsBefore = targetChanges
+flick(800, 500, 0, -120, { pointAt = looter, leave = false })
+noErrors("pointing at a body")
+check(world.target == looter and targetChanges == targetsBefore + 1, "the looter is targeted as the key goes down")
+check(marks[looter] == 4, "and marked")
+-- The same with its plate up: no need to target, its nameplate is found by comparing units.
+addPlate("nameplate4", looter)
+world.target = skull
+targetsBefore = targetChanges
+flick(800, 500, 0, 120, { pointAt = looter, leave = false })
+check(world.target == skull and targetChanges == targetsBefore and marks[looter] == 8,
+    "with a nameplate up it marks the looter and leaves your target alone")
 at(800, 500)
 key("V", true)
 tick(0.05)
@@ -911,6 +935,8 @@ assert(ns.db.size == 1 and ns.db.background == 0.85, "defaults back")
 -- The key button shows the key and opens the key window
 local keyInit = settingsButtons[1]
 assert(keyInit.data.buttonText == "V", "the key button should show V, shows " .. tostring(keyInit.data.buttonText))
+local row = settingsRow(keyInit)
+assert(row.Button._text == "V", "the row on screen shows V")
 keyInit.data.buttonClick()
 assert(MarkWheelKeyCatcher and MarkWheelKeyCatcher._shown, "the key window should open")
 bindings.G = "TOGGLEGUILDTAB"
@@ -923,6 +949,7 @@ assert(MarkWheelKeyCatcher.text._text:find("Guild"), "and should say what uses i
 MarkWheelKeyCatcher._scripts.OnKeyDown(MarkWheelKeyCatcher, "G")
 assert(bindings.G == "MARKWHEEL_HOLD" and bindings.V == nil, "G should replace V")
 assert(keyInit.data.buttonText == "G", "the key button should now show G")
+assert(row.Button._text == "G", "and the row on screen shows G at once, without leaving the page")
 assert(overrideFor("G") and not overrideFor("V"), "G should click the button, V no longer")
 keyInit.data.buttonClick()
 MarkWheelKeyCatcher._scripts.OnKeyDown(MarkWheelKeyCatcher, "V")

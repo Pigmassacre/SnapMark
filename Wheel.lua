@@ -147,6 +147,7 @@ end
 local function who(first)
     local db, combat = ns.db, InCombatLockdown()
     if db.mode == "point" and ns.Secure and ns.Secure.pointed and (not combat or first) then
+        -- Pointing at it, or targeting it as the key went down: either way, it's the one under the pointer.
         return "mouseover", nil
     end
     local unit = db.mode == "focus" and "focus" or "target"
@@ -238,7 +239,7 @@ function Wheel.close(how, marker)
     else
         state.closing = { kind = "fade", t = 0, dur = CLOSE_TIME }
         if how == "lost" and UIErrorsFrame then
-            UIErrorsFrame:AddMessage("Can't find what you pointed at anymore, so nothing was marked.", 1, 0.3, 0.25)
+            UIErrorsFrame:AddMessage("What you pointed at went out of sight before you let go, so nothing was marked.", 1, 0.3, 0.25)
         elseif (marked or how == "clear") and state.reason and UIErrorsFrame then
             UIErrorsFrame:AddMessage(state.reason, 1, 0.3, 0.25)
         end

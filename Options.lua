@@ -3,7 +3,7 @@
 
 local _, ns = ...
 
-local category, keyButton
+local category, keyButton, keyFrame
 
 ----------------------------------------------------------------------------------------------------------------------
 -- Choosing the key
@@ -23,10 +23,17 @@ local function keyLabel(key)
     return GetBindingText and GetBindingText(key) or key
 end
 
+-- The settings page draws a button's text when it builds the row; the row on screen gets the new key too.
 local function refreshKeyButton()
     if not keyButton then return end
     local data = keyButton.GetData and keyButton:GetData() or keyButton.data
+    local old = type(data) == "table" and data.buttonText
     if type(data) == "table" then data.buttonText = ns.keyText() end
+    local b = keyFrame and keyFrame.Button
+    if b and b.GetText and b.SetText then
+        local ok, shown = pcall(b.GetText, b)
+        if ok and (shown == old or shown == ns.keyText()) then b:SetText(ns.keyText()) end
+    end
 end
 
 local function buildCatcher()
@@ -77,9 +84,6 @@ local function buildCatcher()
             ns.say("hold " .. keyLabel(combo) .. ", move toward a marker and let go.")
             refreshKeyButton()
             catcher:Hide()
-            if SettingsPanel and SettingsPanel:IsShown() and category then
-                pcall(Settings.OpenToCategory, category:GetID())
-            end
         end
     end
 
@@ -154,6 +158,14 @@ local function register()
 
     keyButton = button("Wheel key", ns.keyText(), ns.chooseKey,
         "The key you hold to open the wheel. Click, then press a key.")
+    -- Remember the row on screen as the page builds it, to change its text when the key changes.
+    if keyButton and type(keyButton.InitFrame) == "function" then
+        local init = keyButton.InitFrame
+        keyButton.InitFrame = function(self, frame, ...)
+            init(self, frame, ...)
+            keyFrame = frame
+        end
+    end
 
     button("Preview", "Show", function() ns.togglePreview() end,
         "Shows the wheel in the middle of the screen to try out the size and look. Nothing gets marked.")
