@@ -1,7 +1,7 @@
 -- MarkWheel: hold a key, flick toward a target marker, let go.
 --
 -- Core: saved settings, the markers, the one rule that turns a movement into a marker (shared by the wheel you see
--- and, as text, by the secure snippet that really marks), events, the slash command and the key offer.
+-- and, as text, by the secure snippet that really marks), events, the key and the slash command.
 --
 -- How marking works: addons may not call SetRaidTarget themselves. MarkWheel's key clicks a secure button
 -- (Secure.lua); a secure snippet reads the direction from an invisible frame much larger than the screen and hands
@@ -28,7 +28,7 @@ ns.DEFAULTS = {
     background = 0.85,    -- how solid the wheel's backing is, 0 to 1
     names = true,         -- the name of the marker you are about to set, in the centre
     sound = true,         -- a tick when the choice changes and a click when a mark is set
-    askedKey = false,     -- offered to take Raidial's key, or said how to pick one
+    toldKey = false,      -- said once how to choose a key, when the wheel had none
 }
 
 local function loadDB()
@@ -196,39 +196,15 @@ function ns.bindKey(key)
     return true
 end
 
--- Once: if the wheel has no key, offer Raidial's (V for most), or say where to choose one.
-local function offerKey()
-    if ns.db.askedKey or GetBindingKey(ns.BINDING) or InCombatLockdown() then return end
-    ns.db.askedKey = true
-    local theirs = { GetBindingKey("RAIDIAL_HOLD") }
-    if #theirs == 0 or not StaticPopupDialogs then
-        ns.say("choose a key for the marker wheel in Options > AddOns > MarkWheel, or type /markwheel.")
-        return
-    end
-    local label = GetBindingText and GetBindingText(theirs[1]) or theirs[1]
-    StaticPopupDialogs.MARKWHEEL_TAKE_KEY = {
-        text = "MarkWheel: use %s for the marker wheel?\n\nRaidial uses it now.",
-        button1 = "Use " .. label,
-        button2 = "Not now",
-        OnAccept = function()
-            if InCombatLockdown() then return end
-            for _, old in ipairs(ns.keys()) do SetBinding(old) end
-            for _, key in ipairs(theirs) do SetBinding(key, ns.BINDING) end
-            SaveBindings(GetCurrentBindingSet())
-            ns.say("hold " .. label .. ", move toward a marker and let go.")
-        end,
-        OnCancel = function()
-            ns.say("you can choose a key any time in Options > AddOns > MarkWheel.")
-        end,
-        timeout = 0,
-        whileDead = true,
-        hideOnEscape = true,
-    }
-    StaticPopup_Show("MARKWHEEL_TAKE_KEY", label)
+-- Once: if the wheel has no key, say where to choose one.
+local function tellKey()
+    if ns.db.toldKey or GetBindingKey(ns.BINDING) then return end
+    ns.db.toldKey = true
+    ns.say("choose a key for the marker wheel in Options > AddOns > MarkWheel, or type /markwheel.")
 end
 
 ns.On("PLAYER_ENTERING_WORLD", function()
-    if C_Timer then C_Timer.After(2, offerKey) else offerKey() end
+    if C_Timer then C_Timer.After(2, tellKey) else tellKey() end
 end)
 
 -- Runs only when the key reaches the game's own binding instead of the wheel: before the wheel is ready (it is set

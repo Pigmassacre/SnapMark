@@ -550,9 +550,6 @@ function PlaySound(id) sounds[#sounds + 1] = id end
 C_Timer = { After = function(_, fn) fn() end }
 SlashCmdList = {}
 function geterrorhandler() return function(e) error(e) end end
-StaticPopupDialogs = {}
-popups = {}
-function StaticPopup_Show(name, arg) popups[#popups + 1] = { name = name, arg = arg } end
 for _, n in ipairs({ "GameFontNormalLarge", "GameFontHighlight", "GameFontDisableSmall" }) do _G[n] = {} end
 
 registeredSettings = {}
@@ -633,10 +630,12 @@ local function flick(x, y, dx, dy, opts)
     tick(0.4)
 end
 
--- 1. Setup: the wheel took Raidial's key
+-- 1. Setup: no key yet, so it says where to choose one, once
 check(ns.ready, "the secure part should be set up at login")
-check(#popups == 1 and popups[1].name == "MARKWHEEL_TAKE_KEY", "should offer to take Raidial's key")
-StaticPopupDialogs.MARKWHEEL_TAKE_KEY.OnAccept()
+check(#chat == 1 and chat[1]:find("choose a key"), "should say once where to choose a key")
+fireEvent("PLAYER_ENTERING_WORLD")
+check(#chat == 1, "and only once")
+check(ns.bindKey("V"), "binding V")
 check(bindings.V == "MARKWHEEL_HOLD", "V should now open the wheel")
 check(savedBindings > 0, "the key bindings should be saved")
 check(overrideFor("V") and overrideFor("V").target == "MarkWheelButton", "V should click the wheel's button")
@@ -947,7 +946,7 @@ return count
 def load_addon():
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     lua.execute(WOW_STUB)
-    lua.execute('bindings.V = "RAIDIAL_HOLD"; bindings["CTRL-V"] = "PASTE_SOMETHING"')
+    lua.execute('bindings["CTRL-V"] = "PASTE_SOMETHING"')
     load = lua.eval("function(code, name, ns) local f, err = loadstring(code, name); if not f then error(err) end; return f('MarkWheel', ns) end")
     ns = lua.table()
     with open(os.path.join(ADDON, "MarkWheel.toc")) as f:
@@ -1151,7 +1150,7 @@ def snapshots(outdir):
     lua, ns = load_addon()
     g = lua.globals()
     lua.execute("""
-        StaticPopupDialogs.MARKWHEEL_TAKE_KEY.OnAccept()
+        SetBinding("V", "MARKWHEEL_HOLD")
         world.player = { guid = "Player-1", name = "Olof" }
         addPlate("nameplate1", { guid = "Creature-1", name = "Defias Pillager", mob = true })
         world.target = world.nameplate1
