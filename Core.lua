@@ -230,6 +230,10 @@ SlashCmdList.MARKWHEEL = function(msg)
         if ns.openOptions then ns.openOptions() else help() end
     elseif cmd == "preview" then
         ns.togglePreview()
+    elseif cmd == "debug" then
+        ns.debug = not ns.debug
+        ns.say(ns.debug and "debug on: each press and release of the wheel is reported here. /markwheel debug again turns it off."
+            or "debug off.")
     else
         help()
     end

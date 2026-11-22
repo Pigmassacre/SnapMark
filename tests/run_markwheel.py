@@ -862,6 +862,30 @@ targetsBefore = targetChanges
 flick(800, 500, 0, 120, { pointAt = looter, leave = false })
 check(world.target == skull and targetChanges == targetsBefore and marks[looter] == 8,
     "with a nameplate up it marks the looter and leaves your target alone")
+-- A friendly player outside your group: their ID can be read, but no lasting token finds them once the pointer has
+-- moved on. The key targets them as it goes down.
+secretMode = false
+local stranger = { guid = "Player-77", name = "Bob" }
+flick(800, 500, 120, 0, { pointAt = stranger, leave = false })
+noErrors("a friendly player")
+check(world.target == stranger and marks[stranger] == 6, "a friendly player outside the group is targeted and marked")
+-- A party member is found again by their group token: no targeting.
+local friend = { guid = "Player-78", name = "Kessa" }
+world.party1 = friend
+world.target = skull
+targetsBefore = targetChanges
+flick(800, 500, -120, 0, { pointAt = friend, leave = false })
+check(world.target == skull and targetChanges == targetsBefore and marks[friend] == 2, "a party member is marked as party1")
+world.party1 = nil
+-- /markwheel debug reports each step
+local before = #chat
+SlashCmdList.MARKWHEEL("debug")
+flick(800, 500, 0, 120, { pointAt = stranger, leave = false })
+local said = table.concat(chat, "\n", before + 1)
+check(said:find("debug on") and said:find("targets it now") and said:find("let go: marks target")
+    and said:find("marker 8"), "the debug report: " .. said)
+SlashCmdList.MARKWHEEL("debug")
+secretMode = true
 at(800, 500)
 key("V", true)
 tick(0.05)

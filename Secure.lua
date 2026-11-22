@@ -154,7 +154,10 @@ end)
 ns.On("NAME_PLATE_UNIT_REMOVED", function(unit)
     if type(unit) == "string" then serial = serial + 1 plateSerial[unit] = serial end
 end)
-ns.On("PLAYER_TARGET_CHANGED", function() targetSerial = targetSerial + 1 end)
+ns.On("PLAYER_TARGET_CHANGED", function()
+    targetSerial = targetSerial + 1
+    Secure.trace("your target changed")
+end)
 
 local candidates = { "target", "focus", "player", "pet", "targettarget", "focustarget" }
 for i = 1, 4 do candidates[#candidates + 1] = "party" .. i candidates[#candidates + 1] = "partypet" .. i end
@@ -196,8 +199,18 @@ function Secure.capture()
             c.plate, c.token, c.serial = plate, token, plateSerial[token]
         end
     end
-    c.targetNow = not c.plate and not c.guid and not c.isTarget
+    -- Can it be found again when the key comes up, wherever the pointer is by then? Only by a lasting token: its
+    -- nameplate, a group token, target or focus. If not (a friendly player outside your group, a body whose ID the
+    -- game hides), the key targets it as it goes down and marks your target.
+    local again = Secure.resolve(c)
+    c.again = again
+    c.targetNow = not c.isTarget and (again == nil or again == "mouseover")
     return c
+end
+
+-- /markwheel debug: each step of a press and release, in chat.
+function Secure.trace(fmt, ...)
+    if ns.debug then ns.say("|cff999999" .. string.format(fmt, ...) .. "|r") end
 end
 
 -- The unit token for a capture now, or nil when it can't be found again.
@@ -271,7 +284,10 @@ function Secure.setup()
     button:SetFrameRef("pad", pad)
 
     button.WheelOpened = function(_, first) ns.Wheel.open(first) end
-    button.WheelClosed = function(_, how, marker) ns.Wheel.close(how, marker) end
+    button.WheelClosed = function(_, how, marker)
+        Secure.trace("the wheel closed: %s%s", how, marker and (", marker " .. marker) or "")
+        ns.Wheel.close(how, marker)
+    end
 
     -- Runs before the snippet, on every click. Outside a fight it may set attributes: it tells the snippet which
     -- unit you pointed at.
@@ -279,6 +295,14 @@ function Secure.setup()
         if which == "Cancel" then return end
         if down then
             Secure.pointed = Secure.capture()
+            local c = Secure.pointed
+            if not c then
+                Secure.trace("pressed: not pointing at anything, so it marks your %s", ns.db.mode == "focus" and "focus" or "target")
+            else
+                Secure.trace("pressed: pointing at something. ID %s, nameplate %s, your target %s, found again as %s: %s",
+                    c.guid and "readable" or "hidden", c.token or "none", c.isTarget == true and "yes" or "no",
+                    tostring(c.again), c.targetNow and "targets it now" or "no need to target it")
+            end
             if not InCombatLockdown() then
                 self:SetAttribute("mw-unit", nil)
                 self:SetAttribute("mw-targetnow",
@@ -288,6 +312,7 @@ function Secure.setup()
             -- Targeted as the key went down: mark the target.
             local unit = Secure.pointed.targetNow and "target" or Secure.resolve(Secure.pointed)
             self:SetAttribute("mw-unit", unit or "lost")
+            Secure.trace("let go: marks %s", unit or "nothing (lost it)")
         end
     end)
 
