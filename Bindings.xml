@@ -1,0 +1,5 @@
+<Bindings>
+    <Binding name="MARKWHEEL_HOLD" header="MARKWHEEL" category="ADDONS" runOnUp="true">
+        MarkWheel_OnBinding(keystate)
+    </Binding>
+</Bindings>
