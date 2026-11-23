@@ -10,7 +10,7 @@ whole wheel plus a margin for its shadow (RING_SPAN units across), so they can s
     notch   a small pointer on the centre's edge, pointing up; rotated to the way you move
     disc    the centre
     glow    a round soft glow, for behind the chosen marker
-    icon    the AddOns list icon, in its own colors
+    icon    the AddOns list icon, in its own colors (also the CurseForge avatar)
 
     python3 tools/make_markwheel_art.py
 
@@ -150,21 +150,83 @@ def glow(size=128):
     return out
 
 
-def icon(size=64):
+ICON_BG = (17, 21, 26)
+# The eight markers' colours, clockwise from the top: skull, cross, square, moon, triangle, diamond, circle, star.
+ICON_MARKS = [(240, 238, 230), (232, 72, 60), (66, 146, 240), (200, 212, 228), (84, 200, 96), (196, 98, 226),
+              (242, 140, 48), (246, 208, 70)]
+
+
+def _sector_points(c, r0, r1, a0, a1, steps=96):
+    """An annular sector; angles in degrees, clockwise from the top."""
+    out = [(c + math.sin(math.radians(a0 + (a1 - a0) * i / steps)) * r1,
+            c - math.cos(math.radians(a0 + (a1 - a0) * i / steps)) * r1) for i in range(steps + 1)]
+    out += [(c + math.sin(math.radians(a0 + (a1 - a0) * i / steps)) * r0,
+             c - math.cos(math.radians(a0 + (a1 - a0) * i / steps)) * r0) for i in range(steps, -1, -1)]
+    return out
+
+
+def _round_corners(mask, r):
+    """Blur, then cut at half: convex corners come out round."""
+    return mask.filter(ImageFilter.GaussianBlur(r)).point(lambda v: 255 if v >= 128 else 0)
+
+
+def icon(size=128, corner=0.22, pick=7):
+    """The wheel reduced to its idea: one slice chosen and reaching past the rim (overshooting still picks it), with
+    the marker's star cut out of it; the other markers are thin arcs of their colours. On a dark tile with round
+    corners (corner=0 fills the square)."""
     S = size * SS
-    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
     c = S / 2
-    d.ellipse(circle_box(c, S * 0.47), fill=(22, 26, 30, 255))
-    d.ellipse(circle_box(c, S * 0.47), outline=(120, 130, 140, 255), width=SS * 2)
-    colors = [(242, 242, 236), (232, 68, 58), (63, 142, 240), (201, 214, 230), (79, 201, 90), (194, 94, 224),
-              (240, 138, 44), (245, 209, 66)]
-    for i, col in enumerate(colors):
-        a = math.radians(90 - i * 45)
-        x, y = c + math.cos(a) * S * 0.31, c - math.sin(a) * S * 0.31
-        d.ellipse(circle_box(x, S * (0.085 if i else 0.11)), fill=col + (255,))
-    # The chosen slice: a pointer from the centre towards the skull.
-    d.polygon([(c, c - S * 0.17), (c + S * 0.07, c - S * 0.04), (c - S * 0.07, c - S * 0.04)], fill=(242, 242, 236, 255))
+    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+
+    def mask():
+        return Image.new("L", (S, S), 0)
+
+    def paint(m, col):
+        layer = Image.new("RGBA", (S, S), col + (255,))
+        layer.putalpha(m)
+        img.alpha_composite(layer)
+
+    def mix(col, t):
+        return tuple(int(ICON_BG[i] + (col[i] - ICON_BG[i]) * t) for i in range(3))
+
+    m = mask()
+    if corner:
+        ImageDraw.Draw(m).rounded_rectangle((0, 0, S - 1, S - 1), radius=int(S * corner), fill=255)
+    else:
+        m.paste(255, (0, 0, S, S))
+    paint(m, ICON_BG)
+
+    # The rim: an arc for every other marker, round at the ends.
+    R, w, gap = S * 0.34, S * 0.028, 7
+    for i, col in enumerate(ICON_MARKS):
+        if i == pick:
+            continue
+        a0, a1 = i * 45 - 22.5 + gap, i * 45 + 22.5 - gap
+        m = mask()
+        d = ImageDraw.Draw(m)
+        d.polygon(_sector_points(c, R - w / 2, R + w / 2, a0, a1), fill=255)
+        for a in (a0, a1):
+            x, y = c + math.sin(math.radians(a)) * R, c - math.cos(math.radians(a)) * R
+            d.ellipse((x - w / 2, y - w / 2, x + w / 2, y + w / 2), fill=255)
+        paint(m, mix(col, 0.7))
+
+    # The chosen slice, past the rim, with an upright star cut out of it.
+    from PIL import ImageChops
+    m = mask()
+    ImageDraw.Draw(m).polygon(_sector_points(c, S * 0.13, S * 0.45, pick * 45 - 18.5, pick * 45 + 18.5), fill=255)
+    m = _round_corners(m, S * 0.012)
+    a = math.radians(pick * 45)
+    sx, sy, sr = c + math.sin(a) * S * 0.305, c - math.cos(a) * S * 0.305, S * 0.08
+    star = mask()
+    ImageDraw.Draw(star).polygon([(sx + math.sin(math.radians(k * 36)) * sr * (1 if k % 2 == 0 else 0.42),
+                                   sy - math.cos(math.radians(k * 36)) * sr * (1 if k % 2 == 0 else 0.42))
+                                  for k in range(10)], fill=255)
+    paint(ImageChops.subtract(m, _round_corners(star, sr * 0.04)), ICON_MARKS[pick])
+
+    # The centre.
+    m = mask()
+    ImageDraw.Draw(m).ellipse(circle_box(c, S * 0.055), fill=255)
+    paint(m, (242, 240, 232))
     return img.resize((size, size), Image.LANCZOS)
 
 
