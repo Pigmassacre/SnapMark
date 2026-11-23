@@ -3,6 +3,7 @@
 ## Notes: Hold a key, flick, release. A radial menu for target markers that never misses. Works in and out of combat. Supports ground markers too.
 ## Version: @project-version@
 ## X-License: MIT
+## X-Curse-Project-ID: 1825893
 ## SavedVariables: SnapMarkDB
 ## IconTexture: Interface\AddOns\SnapMark\Media\icon
 ## AddonCompartmentFunc: SnapMark_OnAddonCompartmentClick

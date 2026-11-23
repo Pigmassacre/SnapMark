@@ -12,5 +12,5 @@ What to fill in when creating the SnapMark project on CurseForge. Not part of th
 - **Screenshots:** take them in the game. The Preview button on the settings page shows the wheel without marking
   anything; one shot of the wheel open over a target with a slice lit up says the most.
 
-After the project is created, put its ID in `SnapMark.toc` as `## X-Curse-Project-ID: <id>` and add the API token
-to the GitHub repo as the `CF_API_KEY` secret. The Release workflow then uploads every `v*` tag.
+The project is SnapMark, ID 1825893, set in `SnapMark.toc` as `## X-Curse-Project-ID`. With the API token in the
+GitHub repo as the `CF_API_KEY` secret, the Release workflow uploads every `v*` tag.
