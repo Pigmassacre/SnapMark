@@ -3,4 +3,5 @@ package-as: MarkWheel
 ignore:
   - tests
   - tools
+  - curseforge
   - README.md

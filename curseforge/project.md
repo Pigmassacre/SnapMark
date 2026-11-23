@@ -1,0 +1,17 @@
+# CurseForge project fields
+
+What to fill in when creating the MarkWheel project on CurseForge. Not part of the addon zip.
+
+- **Game / class:** World of Warcraft / Addons
+- **Name:** MarkWheel
+- **Summary:** Hold a key, flick toward a target marker and let go. The direction picks the marker, so it never
+  misses. Works in and out of combat.
+- **Main category:** Combat (Miscellaneous also fits)
+- **License:** MIT License
+- **Avatar:** `avatar.png` (512 × 512; redraw with `python3 tools/make_curseforge_avatar.py`)
+- **Description:** paste `description.md`, with the editor set to Markdown
+- **Screenshots:** take them in the game. The Preview button on the settings page shows the wheel without marking
+  anything; one shot of the wheel open over a target with a slice lit up says the most.
+
+After the project is created, put its ID in `MarkWheel.toc` as `## X-Curse-Project-ID: <id>` and add the API token
+to the GitHub repo as the `CF_API_KEY` secret. The Release workflow then uploads every `v*` tag.
