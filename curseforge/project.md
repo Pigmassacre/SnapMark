@@ -9,8 +9,8 @@ What to fill in when creating the SnapMark project on CurseForge. Not part of th
 - **License:** MIT License
 - **Avatar:** `avatar.png` (512 × 512; redraw with `python3 tools/make_curseforge_avatar.py`)
 - **Description:** paste `description.md`, with the editor set to Markdown
-- **Screenshots:** take them in the game. The Preview button on the settings page shows the wheel without marking
-  anything; one shot of the wheel open over a target with a slice lit up says the most.
+- **Screenshots:** `screenshots/1-hold-a-key.png` and `screenshots/2-flick-release.png` (1600 × 900), in that order.
+  Drawn from the in-game shots in `screenshots/source/` with `python3 tools/make_curseforge_shots.py`.
 
 The project is SnapMark, ID 1825893, set in `SnapMark.toc` as `## X-Curse-Project-ID`. With the API token in the
 GitHub repo as the `CF_API_KEY` secret, the Release workflow uploads every `v*` tag.
