@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Runs MarkWheel headless against a stand-in for the WoW API and checks that it marks what it should, in and out of
+"""Runs FlickMark headless against a stand-in for the WoW API and checks that it marks what it should, in and out of
 combat, and can draw the wheel to PNG files.
 
-The stand-in follows Blizzard's secure code where MarkWheel depends on it (wow-ui-source, forever branch):
+The stand-in follows Blizzard's secure code where FlickMark depends on it (wow-ui-source, forever branch):
 
   - The secure snippets run in a restricted environment with only the functions Blizzard's has, through frame
     handles with Blizzard's methods. HANDLE:GetMousePosition returns nothing outside the frame and HANDLE:SetPoint
@@ -17,7 +17,7 @@ The stand-in follows Blizzard's secure code where MarkWheel depends on it (wow-u
 
 Needs lupa (pip install lupa); drawing needs Pillow.
 
-    python3 tests/run_markwheel.py [--snapshot DIR]
+    python3 tests/run_flickmark.py [--snapshot DIR]
 """
 
 import argparse
@@ -493,7 +493,7 @@ function runWrap(frame, script)
 end
 
 ----------------------------------------------------------------------------------------------------------------------
--- Blizzard's action button (SecureTemplates.lua) for the two actions MarkWheel uses
+-- Blizzard's action button (SecureTemplates.lua) for the two actions FlickMark uses
 
 lastAction = nil
 targetChanges = 0
@@ -573,15 +573,15 @@ function key(k, down)
         return "override"
     end
     local action = bindings[k]
-    if action == "MARKWHEEL_HOLD" or action == "MARKWHEEL_GROUND" then
-        MarkWheel_OnBinding(down and "down" or "up")
+    if action == "FLICKMARK_HOLD" or action == "FLICKMARK_GROUND" then
+        FlickMark_OnBinding(down and "down" or "up")
         return "binding"
     end
     return nil
 end
 
 ----------------------------------------------------------------------------------------------------------------------
--- Everything else MarkWheel touches
+-- Everything else FlickMark touches
 
 DEFAULT_CHAT_FRAME = { AddMessage = function(_, m) chat[#chat + 1] = m end }
 chat = {}
@@ -692,9 +692,9 @@ check(#chat == 1 and chat[1]:find("choose a key"), "should say once where to cho
 fireEvent("PLAYER_ENTERING_WORLD")
 check(#chat == 1, "and only once")
 check(ns.bindKey("V"), "binding V")
-check(bindings.V == "MARKWHEEL_HOLD", "V should now open the wheel")
+check(bindings.V == "FLICKMARK_HOLD", "V should now open the wheel")
 check(savedBindings > 0, "the key bindings should be saved")
-check(overrideFor("V") and overrideFor("V").target == "MarkWheelButton", "V should click the wheel's button")
+check(overrideFor("V") and overrideFor("V").target == "FlickMarkButton", "V should click the wheel's button")
 check(overrideFor("SHIFT-V"), "Shift-V should open it too, as nothing else uses it")
 check(not overrideFor("CTRL-V"), "Ctrl-V belongs to something else and must stay theirs")
 
@@ -923,19 +923,19 @@ targetsBefore = targetChanges
 flick(800, 500, -120, 0, { pointAt = friend, leave = false })
 check(world.target == skull and targetChanges == targetsBefore and marks[friend] == 2, "a party member is marked as party1")
 world.party1 = nil
--- /markwheel debug reports each step
+-- /flickmark debug reports each step
 local before = #chat
-SlashCmdList.MARKWHEEL("debug")
+SlashCmdList.FLICKMARK("debug")
 flick(800, 500, 0, 120, { pointAt = stranger, leave = false })
 local said = table.concat(chat, "\n", before + 1)
 check(said:find("debug on") and said:find("targets it now") and said:find("let go: marks target")
     and said:find("marker 8"), "the debug report: " .. said)
-SlashCmdList.MARKWHEEL("debug")
+SlashCmdList.FLICKMARK("debug")
 secretMode = true
 at(800, 500)
 key("V", true)
 tick(0.05)
-check(MarkWheelWheel.unit ~= nil, "")
+check(FlickMarkWheel.unit ~= nil, "")
 key("V", false)
 tick(0.3)
 secretMode = false
@@ -964,10 +964,10 @@ fresh()
 inCombat = true
 ns.set("mode", "target")
 noErrors("setting in combat")
-check(MarkWheelButton._attrs["mw-mode"] == "point", "the button must not change in combat")
+check(FlickMarkButton._attrs["mw-mode"] == "point", "the button must not change in combat")
 inCombat = false
 fireEvent("PLAYER_REGEN_ENABLED")
-check(MarkWheelButton._attrs["mw-mode"] == "target", "it changes when the fight ends")
+check(FlickMarkButton._attrs["mw-mode"] == "target", "it changes when the fight ends")
 ns.set("mode", "point")
 
 -- 14. Sounds: a tick on each new choice, a click on the mark
@@ -986,7 +986,7 @@ ns.set("sound", true)
 fresh()
 inGroup = true
 check(ns.bindKey("B", ns.GROUND_BINDING), "binding B to the ground marker wheel")
-check(bindings.B == "MARKWHEEL_GROUND" and bindings.V == "MARKWHEEL_HOLD", "each wheel has its own key")
+check(bindings.B == "FLICKMARK_GROUND" and bindings.V == "FLICKMARK_HOLD", "each wheel has its own key")
 check(overrideFor("B") and overrideFor("B").button == "Ground", "B should click the button as Ground")
 check(overrideFor("SHIFT-B") and overrideFor("SHIFT-B").button == "Ground", "Shift-B opens the ground wheel too")
 for i, slot in ipairs(ns.SLOTS) do
@@ -1001,7 +1001,7 @@ local down = 0
 for _ in pairs(groundMarks) do down = down + 1 end
 check(down == 8, "all eight ground markers should be down")
 check(next(marks) == nil and world.target == skull, "the ground wheel marks no unit and leaves your target alone")
-check(ns.Wheel.state.kind == "ground" and MarkWheelWheel.unit._text == "Ground marker", "the wheel says it's for ground markers")
+check(ns.Wheel.state.kind == "ground" and FlickMarkWheel.unit._text == "Ground marker", "the wheel says it's for ground markers")
 -- The wheel and the snippet agree here too
 local gmis = 0
 for a = 0, 359, 15 do
@@ -1077,7 +1077,7 @@ ns.Secure.sync()
 check(overrideFor("B"), "back")
 -- The help line names the ground key
 local before = #chat
-SlashCmdList.MARKWHEEL("help")
+SlashCmdList.FLICKMARK("help")
 check(chat[before + 1]:find("click the ground"), "help mentions the ground key")
 noErrors("end")
 return ruleTries
@@ -1085,7 +1085,7 @@ return ruleTries
 
 SETTINGS_CHECK = r"""
 local ns = ...
-assert(settingsCategory and settingsCategory.name == "MarkWheel", "the settings page was not registered")
+assert(settingsCategory and settingsCategory.name == "FlickMark", "the settings page was not registered")
 local count = 0
 for name, s in pairs(registeredSettings) do
     count = count + 1
@@ -1106,47 +1106,47 @@ assert(keyInit.data.buttonText == "V", "the key button should show V, shows " ..
 local row = settingsRow(keyInit)
 assert(row.Button._text == "V", "the row on screen shows V")
 keyInit.data.buttonClick()
-assert(MarkWheelKeyCatcher and MarkWheelKeyCatcher._shown, "the key window should open")
+assert(FlickMarkKeyCatcher and FlickMarkKeyCatcher._shown, "the key window should open")
 bindings.G = "TOGGLEGUILDTAB"
 BINDING_NAME_TOGGLEGUILDTAB = "Guild"
-MarkWheelKeyCatcher._scripts.OnKeyDown(MarkWheelKeyCatcher, "LSHIFT")
-MarkWheelKeyCatcher._scripts.OnKeyDown(MarkWheelKeyCatcher, "G")
-assert(MarkWheelKeyCatcher._text == nil or true)
+FlickMarkKeyCatcher._scripts.OnKeyDown(FlickMarkKeyCatcher, "LSHIFT")
+FlickMarkKeyCatcher._scripts.OnKeyDown(FlickMarkKeyCatcher, "G")
+assert(FlickMarkKeyCatcher._text == nil or true)
 assert(bindings.G == "TOGGLEGUILDTAB", "a key in use needs a second press")
-assert(MarkWheelKeyCatcher.text._text:find("Guild"), "and should say what uses it")
-MarkWheelKeyCatcher._scripts.OnKeyDown(MarkWheelKeyCatcher, "G")
-assert(bindings.G == "MARKWHEEL_HOLD" and bindings.V == nil, "G should replace V")
+assert(FlickMarkKeyCatcher.text._text:find("Guild"), "and should say what uses it")
+FlickMarkKeyCatcher._scripts.OnKeyDown(FlickMarkKeyCatcher, "G")
+assert(bindings.G == "FLICKMARK_HOLD" and bindings.V == nil, "G should replace V")
 assert(keyInit.data.buttonText == "G", "the key button should now show G")
 assert(row.Button._text == "G", "and the row on screen shows G at once, without leaving the page")
 assert(overrideFor("G") and not overrideFor("V"), "G should click the button, V no longer")
 keyInit.data.buttonClick()
-MarkWheelKeyCatcher._scripts.OnKeyDown(MarkWheelKeyCatcher, "V")
-assert(bindings.V == "MARKWHEEL_HOLD", "back to V")
+FlickMarkKeyCatcher._scripts.OnKeyDown(FlickMarkKeyCatcher, "V")
+assert(bindings.V == "FLICKMARK_HOLD", "back to V")
 -- The ground marker key has its own button and the same key window
 local groundInit = settingsButtons[3]
 assert(groundInit.data.name == "Ground marker key", "the third button should be the ground marker key")
 assert(groundInit.data.buttonText == "B", "it shows B, shows " .. tostring(groundInit.data.buttonText))
 local groundRow = settingsRow(groundInit)
 groundInit.data.buttonClick()
-assert(MarkWheelKeyCatcher.title._text == "Ground marker wheel key", "the key window names the ground wheel")
-MarkWheelKeyCatcher._scripts.OnKeyDown(MarkWheelKeyCatcher, "V")
-assert(bindings.V == "MARKWHEEL_HOLD" and MarkWheelKeyCatcher.text._text:find("Marker wheel"),
+assert(FlickMarkKeyCatcher.title._text == "Ground marker wheel key", "the key window names the ground wheel")
+FlickMarkKeyCatcher._scripts.OnKeyDown(FlickMarkKeyCatcher, "V")
+assert(bindings.V == "FLICKMARK_HOLD" and FlickMarkKeyCatcher.text._text:find("Marker wheel"),
     "V is the marker wheel's: it asks first")
-MarkWheelKeyCatcher._scripts.OnKeyDown(MarkWheelKeyCatcher, "N")
-assert(bindings.N == "MARKWHEEL_GROUND" and bindings.B == nil and bindings.V == "MARKWHEEL_HOLD", "N replaces B")
+FlickMarkKeyCatcher._scripts.OnKeyDown(FlickMarkKeyCatcher, "N")
+assert(bindings.N == "FLICKMARK_GROUND" and bindings.B == nil and bindings.V == "FLICKMARK_HOLD", "N replaces B")
 assert(groundRow.Button._text == "N" and row.Button._text == "V", "each row shows its own key")
 -- Preview
 settingsButtons[2].data.buttonClick()
 assert(ns.Wheel.isPreview(), "Preview should show the wheel")
 tick(0.3)
 SettingsPanel._scripts.OnHide(SettingsPanel)
-assert(not MarkWheelWheel._shown, "closing the settings closes the preview")
-SlashCmdList.MARKWHEEL("")
-assert(settingsOpened == 9, "/markwheel opens the settings")
-SlashCmdList.MARKWHEEL("preview")
-assert(ns.Wheel.isPreview(), "/markwheel preview")
-SlashCmdList.MARKWHEEL("preview")
-SlashCmdList.MARKWHEEL("help")
+assert(not FlickMarkWheel._shown, "closing the settings closes the preview")
+SlashCmdList.FLICKMARK("")
+assert(settingsOpened == 9, "/flickmark opens the settings")
+SlashCmdList.FLICKMARK("preview")
+assert(ns.Wheel.isPreview(), "/flickmark preview")
+SlashCmdList.FLICKMARK("preview")
+SlashCmdList.FLICKMARK("help")
 return count
 """
 
@@ -1155,15 +1155,15 @@ def load_addon():
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     lua.execute(WOW_STUB)
     lua.execute('bindings["CTRL-V"] = "PASTE_SOMETHING"')
-    load = lua.eval("function(code, name, ns) local f, err = loadstring(code, name); if not f then error(err) end; return f('MarkWheel', ns) end")
+    load = lua.eval("function(code, name, ns) local f, err = loadstring(code, name); if not f then error(err) end; return f('FlickMark', ns) end")
     ns = lua.table()
-    with open(os.path.join(ADDON, "MarkWheel.toc")) as f:
+    with open(os.path.join(ADDON, "FlickMark.toc")) as f:
         files = [line.strip() for line in f if line.strip().endswith(".lua")]
     for name in files:
         with open(os.path.join(ADDON, name), encoding="utf-8") as f:
             load(f.read(), "@" + name, ns)
     g = lua.globals()
-    g.fireEvent("ADDON_LOADED", "MarkWheel")
+    g.fireEvent("ADDON_LOADED", "FlickMark")
     g.fireEvent("PLAYER_LOGIN")
     g.fireEvent("PLAYER_ENTERING_WORLD")
     return lua, ns
@@ -1227,7 +1227,7 @@ def draw(lua, path, crop=None, scale=2.0, background=None):
     g = lua.globals()
     W, H = int(g.screenW * scale), int(g.screenH * scale)
     canvas = background(W, H) if background else Image.new("RGBA", (W, H), (40, 48, 40, 255))
-    f = g.MarkWheelWheel
+    f = g.FlickMarkWheel
     if not f._shown:
         canvas.save(path)
         return
@@ -1358,8 +1358,8 @@ def snapshots(outdir):
     lua, ns = load_addon()
     g = lua.globals()
     lua.execute("""
-        SetBinding("V", "MARKWHEEL_HOLD")
-        SetBinding("B", "MARKWHEEL_GROUND")
+        SetBinding("V", "FLICKMARK_HOLD")
+        SetBinding("B", "FLICKMARK_GROUND")
         inGroup = true
         world.player = { guid = "Player-1", name = "Olof" }
         addPlate("nameplate1", { guid = "Creature-1", name = "Defias Pillager", mob = true })
@@ -1395,10 +1395,10 @@ def snapshots(outdir):
     hold(200, -60, 0.3, "no_target.png")
     let_go(0.4, None)
     lua.execute("world.target = world.nameplate1 ns = ...", ns)
-    lua.execute("MarkWheelDB.size = 1.3 MarkWheelDB.background = 0.4")
+    lua.execute("FlickMarkDB.size = 1.3 FlickMarkDB.background = 0.4")
     hold(-200, 90, 0.3, "large_light.png")
     let_go(0.4, None)
-    lua.execute("MarkWheelDB.size = 1 MarkWheelDB.background = 0.85")
+    lua.execute("FlickMarkDB.size = 1 FlickMarkDB.background = 0.85")
     hold(-140, 150, 0.3, "ground.png", k="B")
     let_go(0.4, None, k="B")
 

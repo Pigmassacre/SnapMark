@@ -1,4 +1,4 @@
-# MarkWheel
+# FlickMark
 
 A raid target marker wheel for **World of Warcraft: Forever**. Hold a key, flick toward a marker, let go.
 
@@ -12,7 +12,7 @@ A raid target marker wheel for **World of Warcraft: Forever**. Hold a key, flick
 - **Ground markers on a second key.** The same wheel, with the markers in the same places: let go on one, then click
   the ground where it goes. Picking a marker that's already down moves it.
 
-Settings: Options > AddOns > MarkWheel, or `/markwheel`. Choose the keys there.
+Settings: Options > AddOns > FlickMark, or `/flickmark`. Choose the keys there.
 
 ## Working on it
 
@@ -20,11 +20,11 @@ The tests run the addon headless against a stand-in for the WoW API (Lua 5.1 thr
 
 ```bash
 pip install lupa pillow
-python tests/run_markwheel.py
+python tests/run_flickmark.py
 ```
 
-The harness runs MarkWheel's real secure snippet in a stand-in for Blizzard's restricted environment.
-`tools/make_markwheel_art.py` draws the wheel's textures in `Media/`.
+The harness runs FlickMark's real secure snippet in a stand-in for Blizzard's restricted environment.
+`tools/make_flickmark_art.py` draws the wheel's textures in `Media/`.
 
 Releases: push a tag like `v0.2.0`. The Release workflow builds the zip with the BigWigs packager and publishes
 it on GitHub; the version in the `.toc` comes from the tag.

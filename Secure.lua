@@ -1,9 +1,9 @@
 -- The part that really marks, in and out of combat alike.
 --
--- MarkWheel's key is an override binding that clicks MarkWheelButton, a secure action button, on key down and key
+-- FlickMark's key is an override binding that clicks FlickMarkButton, a secure action button, on key down and key
 -- up. A secure snippet wrapped around its OnClick does the work:
 --
---   key down  centres MarkWheelPad, an invisible secure frame far larger than the screen, on the pointer, so the
+--   key down  centres FlickMarkPad, an invisible secure frame far larger than the screen, on the pointer, so the
 --             pointer can never leave it. Esc and right-click now cancel. The wheel you see opens (Wheel.lua).
 --   key up    reads the pointer's position on the pad, which is the movement since the key went down, picks the
 --             marker with the same rule as ns.pick, and arms Blizzard's own "raidtarget" action for this click.
@@ -257,7 +257,7 @@ function Secure.capture()
     return c
 end
 
--- /markwheel debug: each step of a press and release, in chat.
+-- /flickmark debug: each step of a press and release, in chat.
 function Secure.trace(fmt, ...)
     if ns.debug then ns.say("|cff999999" .. string.format(fmt, ...) .. "|r") end
 end
@@ -324,13 +324,13 @@ function Secure.setup()
 
     owner = CreateFrame("Frame")
 
-    pad = CreateFrame("Frame", "MarkWheelPad", UIParent, "SecureHandlerBaseTemplate")
+    pad = CreateFrame("Frame", "FlickMarkPad", UIParent, "SecureHandlerBaseTemplate")
     pad:SetSize(PAD_SIZE, PAD_SIZE)
     pad:SetPoint("CENTER")
     pad:EnableMouse(false)
     pad:Hide()
 
-    button = CreateFrame("Button", "MarkWheelButton", UIParent, "SecureActionButtonTemplate,SecureHandlerBaseTemplate")
+    button = CreateFrame("Button", "FlickMarkButton", UIParent, "SecureActionButtonTemplate,SecureHandlerBaseTemplate")
     button:SetSize(1, 1)
     button:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", -10, -10)
     button:EnableMouse(false)

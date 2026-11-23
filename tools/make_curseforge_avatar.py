@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draws the CurseForge project avatar into curseforge/avatar.png: the AddOns list icon from make_markwheel_art.py,
+"""Draws the CurseForge project avatar into curseforge/avatar.png: the AddOns list icon from make_flickmark_art.py,
 filling the whole square (CurseForge rounds the corners itself).
 
     python3 tools/make_curseforge_avatar.py
@@ -7,7 +7,7 @@ filling the whole square (CurseForge rounds the corners itself).
 
 import os
 
-from make_markwheel_art import icon
+from make_flickmark_art import icon
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(os.path.dirname(HERE), "curseforge", "avatar.png")

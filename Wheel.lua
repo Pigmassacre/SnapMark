@@ -7,7 +7,7 @@ local _, ns = ...
 local Wheel = {}
 ns.Wheel = Wheel
 
--- UI units at size 1. Keep in step with tools/make_markwheel_art.py.
+-- UI units at size 1. Keep in step with tools/make_flickmark_art.py.
 local R_IN, R_OUT, R_ICON, RING_SPAN = 36, 116, 78, 248
 local ICON = 34
 local GROW, PUSH = 1.4, 5        -- the chosen marker: how much bigger, and how far out
@@ -47,7 +47,7 @@ local function full(tex)
 end
 
 local function build()
-    f = CreateFrame("Frame", "MarkWheelWheel", UIParent)
+    f = CreateFrame("Frame", "FlickMarkWheel", UIParent)
     f:SetFrameStrata("FULLSCREEN_DIALOG")
     f:SetFrameLevel(60)
     f:SetSize(RING_SPAN, RING_SPAN)
@@ -113,7 +113,7 @@ local function build()
 
     f:SetScript("OnUpdate", function(_, dt) Wheel.update(dt) end)
     f:SetScript("OnHide", function() state.open, state.closing, state.preview = false, nil, false end)
-    UISpecialFrames[#UISpecialFrames + 1] = "MarkWheelWheel"
+    UISpecialFrames[#UISpecialFrames + 1] = "FlickMarkWheel"
 end
 
 ----------------------------------------------------------------------------------------------------------------------

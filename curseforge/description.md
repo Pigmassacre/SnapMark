@@ -16,7 +16,7 @@ the marker you meant. Works in combat.
 
 ## Setup
 
-No keys are bound by default. Open **Options > AddOns > MarkWheel** (or `/markwheel`) and set **Wheel key**. Set
+No keys are bound by default. Open **Options > AddOns > FlickMark** (or `/flickmark`) and set **Wheel key**. Set
 **Ground marker key** too if you want ground markers.
 
 ## Settings
@@ -30,8 +30,8 @@ No keys are bound by default. Open **Options > AddOns > MarkWheel** (or `/markwh
 
 ## Commands
 
-- `/markwheel` or `/mwheel`: settings
-- `/markwheel preview`: show the wheel
+- `/flickmark`: settings
+- `/flickmark preview`: show the wheel
 
 ## Notes
 

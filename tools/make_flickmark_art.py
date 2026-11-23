@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draws MarkWheel's art into MarkWheel/Media as 32-bit TGA files.
+"""Draws FlickMark's art into FlickMark/Media as 32-bit TGA files.
 
 White shapes on a transparent background, which the addon tints. The ring textures all cover the same square: the
 whole wheel plus a margin for its shadow (RING_SPAN units across), so they can share one size and anchor in the game:
@@ -12,7 +12,7 @@ whole wheel plus a margin for its shadow (RING_SPAN units across), so they can s
     glow    a round soft glow, for behind the chosen marker
     icon    the AddOns list icon, in its own colors (also the CurseForge avatar)
 
-    python3 tools/make_markwheel_art.py
+    python3 tools/make_flickmark_art.py
 
 Keep the numbers in step with Wheel.lua (R_IN, R_OUT, RING_SPAN).
 """

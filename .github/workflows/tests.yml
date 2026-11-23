@@ -13,4 +13,4 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install lupa pillow
-      - run: python tests/run_markwheel.py
+      - run: python tests/run_flickmark.py
