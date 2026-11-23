@@ -4,8 +4,7 @@ What to fill in when creating the MarkWheel project on CurseForge. Not part of t
 
 - **Game / class:** World of Warcraft / Addons
 - **Name:** MarkWheel
-- **Summary:** Hold a key, flick toward a target marker and let go. The direction picks the marker, so it never
-  misses. Works in and out of combat.
+- **Summary:** Hold a key, flick, release. A radial menu for target markers that never misses. Works in and out of combat. Supports ground markers too.
 - **Main category:** Combat (Miscellaneous also fits)
 - **License:** MIT License
 - **Avatar:** `avatar.png` (512 × 512; redraw with `python3 tools/make_curseforge_avatar.py`)

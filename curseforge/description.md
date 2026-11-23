@@ -1,59 +1,41 @@
-**A raid target marker wheel for World of Warcraft: Forever.** Hold a key, flick toward a marker, let go.
+**Hold a key. Flick. Release. Marked.**
 
-## Why another marker wheel
+A raid marker wheel for WoW Forever. It picks by direction, not distance, so a fast or sloppy flick still lands on
+the marker you meant. Works in combat.
 
-Most marker wheels pick the marker under your pointer, so moving too far or too fast picks nothing. MarkWheel picks by
-**direction**: once you're past the small centre, any distance in the same direction picks the same marker. It never
-misses in a hurry, and it works the same in and out of combat.
+## Features
 
-## How it works
+- All eight raid markers on a wheel that opens at your cursor
+- Marks your mouseover, or your target if there's nothing under the cursor
+- In combat it marks your target, or optionally targets your mouseover first
+- Pick the marker a mob already has to clear it
+- Release in the centre: nothing, skull, or clear (your choice)
+- Esc or right-click cancels
+- **Ground markers** on a second key: same wheel, same layout. Release, then click the ground. Pick one that's
+  already down to move it.
 
-- **Hold your key** and the wheel opens around your pointer.
-- **Move toward a marker** and let go. That's the mark.
-- **Pick the marker the unit already has** to take it off.
-- **Let go in the centre** to do nothing, or set it to place a skull or remove the mark.
-- **Esc or right-click** cancels.
+## Setup
 
-MarkWheel marks what you point at when you press the key, or your target if you aren't pointing at anything. In a
-fight the game doesn't let addons remember what you pointed at, so it marks your target. If you'd rather mark what
-you point at in a fight too, turn on "Target what I point at, then mark it" (this changes your target).
-
-Marks go through Blizzard's own secure marker action, so there's nothing to switch on before a fight.
-
-## Ground markers
-
-Give MarkWheel a second key for ground markers. It opens the same wheel, with every marker in the same place, so
-there's nothing new to learn: hold the key, move toward a marker, let go, then click the ground where it goes.
-
-- **Picking a marker that's already down moves it.**
-- **Let go in the centre** to do nothing, or set it to remove all ground markers.
-
-## Getting started
-
-MarkWheel has no key out of the box. Open **Options > AddOns > MarkWheel** (or type `/markwheel`), click **Wheel
-key** and press the key you want to hold. For ground markers, do the same with **Ground marker key**.
+No keys are bound by default. Open **Options > AddOns > MarkWheel** (or `/markwheel`) and set **Wheel key**. Set
+**Ground marker key** too if you want ground markers.
 
 ## Settings
 
-- **Wheel key**: the key you hold to open the wheel
-- **Preview**: shows the wheel so you can try out the size and look
-- **What to mark**: what you point at (else your target), your target, or your focus
-- **In a fight**: mark your target, or target what you point at first
-- **Let go in the centre**: nothing, skull, or remove the mark
-- **Wheel size** and **Background**
-- **Marker names** in the middle of the wheel
-- **Sounds**: a soft tick when the choice changes and a click when a mark is set
-- **Ground marker key** and what letting go in the centre of the ground wheel does
+- What to mark: mouseover (else target), target, or focus
+- In combat: mark target, or target mouseover first
+- Centre release, for each wheel
+- Wheel size and background
+- Marker names and sounds
+- Preview button to try the wheel without marking anything
 
 ## Commands
 
-- `/markwheel` or `/mwheel`: open the settings
+- `/markwheel` or `/mwheel`: settings
 - `/markwheel preview`: show the wheel
 
-## Good to know
+## Notes
 
-- In a party anyone can set marks. In a raid you need to be the leader or have assist; that's the game's rule.
-- Ground markers need a group.
-- Keys can't be changed during a fight. Choose your key outside combat.
+- In a raid you need lead or assist to mark. Ground markers need a group.
+- Keys can't be changed in combat.
 
-MarkWheel is free and open source under the MIT license.
+Free and open source (MIT).
