@@ -16,7 +16,7 @@ the marker you meant. Works in combat.
 
 ## Setup
 
-No keys are bound by default. Open **Options > AddOns > FlickMark** (or `/flickmark`) and set **Wheel key**. Set
+No keys are bound by default. Open **Options > AddOns > SnapMark** (or `/snapmark`) and set **Wheel key**. Set
 **Ground marker key** too if you want ground markers.
 
 ## Settings
@@ -30,8 +30,8 @@ No keys are bound by default. Open **Options > AddOns > FlickMark** (or `/flickm
 
 ## Commands
 
-- `/flickmark`: settings
-- `/flickmark preview`: show the wheel
+- `/snapmark`: settings
+- `/snapmark preview`: show the wheel
 
 ## Notes
 

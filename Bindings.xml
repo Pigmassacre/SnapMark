@@ -1,8 +1,8 @@
 <Bindings>
-    <Binding name="FLICKMARK_HOLD" header="FLICKMARK" category="ADDONS" runOnUp="true">
-        FlickMark_OnBinding(keystate)
+    <Binding name="SNAPMARK_HOLD" header="SNAPMARK" category="ADDONS" runOnUp="true">
+        SnapMark_OnBinding(keystate)
     </Binding>
-    <Binding name="FLICKMARK_GROUND" category="ADDONS" runOnUp="true">
-        FlickMark_OnBinding(keystate)
+    <Binding name="SNAPMARK_GROUND" category="ADDONS" runOnUp="true">
+        SnapMark_OnBinding(keystate)
     </Binding>
 </Bindings>

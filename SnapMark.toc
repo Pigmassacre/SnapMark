@@ -1,11 +1,11 @@
 ## Interface: 16001
-## Title: FlickMark
+## Title: SnapMark
 ## Notes: Hold a key, flick, release. A radial menu for target markers that never misses. Works in and out of combat. Supports ground markers too.
 ## Version: @project-version@
 ## X-License: MIT
-## SavedVariables: FlickMarkDB
-## IconTexture: Interface\AddOns\FlickMark\Media\icon
-## AddonCompartmentFunc: FlickMark_OnAddonCompartmentClick
+## SavedVariables: SnapMarkDB
+## IconTexture: Interface\AddOns\SnapMark\Media\icon
+## AddonCompartmentFunc: SnapMark_OnAddonCompartmentClick
 
 Core.lua
 Secure.lua

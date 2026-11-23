@@ -1,4 +1,4 @@
-package-as: FlickMark
+package-as: SnapMark
 
 ignore:
   - tests

@@ -1,9 +1,9 @@
--- FlickMark: hold a key, flick toward a target marker, let go.
+-- SnapMark: hold a key, flick toward a target marker, let go.
 --
 -- Core: saved settings, the markers, the one rule that turns a movement into a marker (shared by the wheel you see
 -- and, as text, by the secure snippet that really marks), events, the key and the slash command.
 --
--- How marking works: addons may not call SetRaidTarget themselves. FlickMark's key clicks a secure button
+-- How marking works: addons may not call SetRaidTarget themselves. SnapMark's key clicks a secure button
 -- (Secure.lua); a secure snippet reads the direction from an invisible frame much larger than the screen and hands
 -- the marker to Blizzard's own "raidtarget" button action. Wheel.lua only draws.
 --
@@ -14,12 +14,12 @@ local ADDON, ns = ...
 
 ns.ADDON = ADDON
 ns.MEDIA = "Interface\\AddOns\\" .. ADDON .. "\\Media\\"
-ns.BINDING = "FLICKMARK_HOLD"
-ns.GROUND_BINDING = "FLICKMARK_GROUND"
+ns.BINDING = "SNAPMARK_HOLD"
+ns.GROUND_BINDING = "SNAPMARK_GROUND"
 
-BINDING_HEADER_FLICKMARK = "FlickMark"
-BINDING_NAME_FLICKMARK_HOLD = "Marker wheel (hold)"
-BINDING_NAME_FLICKMARK_GROUND = "Ground marker wheel (hold)"
+BINDING_HEADER_SNAPMARK = "SnapMark"
+BINDING_NAME_SNAPMARK_HOLD = "Marker wheel (hold)"
+BINDING_NAME_SNAPMARK_GROUND = "Ground marker wheel (hold)"
 
 ----------------------------------------------------------------------------------------------------------------------
 -- Settings
@@ -38,11 +38,11 @@ ns.DEFAULTS = {
 }
 
 local function loadDB()
-    if type(FlickMarkDB) ~= "table" then FlickMarkDB = {} end
+    if type(SnapMarkDB) ~= "table" then SnapMarkDB = {} end
     for k, v in pairs(ns.DEFAULTS) do
-        if FlickMarkDB[k] == nil then FlickMarkDB[k] = v end
+        if SnapMarkDB[k] == nil then SnapMarkDB[k] = v end
     end
-    local db = FlickMarkDB
+    local db = SnapMarkDB
     if db.mode ~= "point" and db.mode ~= "target" and db.mode ~= "focus" then db.mode = "point" end
     if db.combat ~= "target" and db.combat ~= "targetfirst" then db.combat = "target" end
     if db.center ~= "none" and db.center ~= "skull" and db.center ~= "clear" then db.center = "none" end
@@ -82,7 +82,7 @@ end
 -- The rule: past the dead zone, the marker whose direction is nearest to the movement, at any distance. dx and dy
 -- are UI units from where you pressed, y up. Returns the slot index (1 is the skull at the top), or nil in the centre.
 -- The secure snippet in Secure.lua does the same sums in the same order, so both always agree, ties included;
--- tests/run_flickmark.py checks that.
+-- tests/run_snapmark.py checks that.
 function ns.pick(dx, dy, dead)
     dead = dead or ns.deadZone()
     if dx * dx + dy * dy < dead * dead then return nil end
@@ -193,7 +193,7 @@ function ns.set(key, value)
 end
 
 function ns.say(msg)
-    DEFAULT_CHAT_FRAME:AddMessage("|cff8fd3c4FlickMark:|r " .. msg)
+    DEFAULT_CHAT_FRAME:AddMessage("|cff8fd3c4SnapMark:|r " .. msg)
 end
 
 function ns.play(kit)
@@ -233,7 +233,7 @@ end
 local function tellKey()
     if ns.db.toldKey or GetBindingKey(ns.BINDING) then return end
     ns.db.toldKey = true
-    ns.say("choose a key for the marker wheel in Options > AddOns > FlickMark, or type /flickmark.")
+    ns.say("choose a key for the marker wheel in Options > AddOns > SnapMark, or type /snapmark.")
 end
 
 ns.On("PLAYER_ENTERING_WORLD", function()
@@ -242,7 +242,7 @@ end)
 
 -- Runs only when the key reaches the game's own binding instead of the wheel: before the wheel is ready (it is set
 -- up outside a fight).
-function FlickMark_OnBinding(keystate)
+function SnapMark_OnBinding(keystate)
     if keystate ~= "down" then return end
     if not ns.ready then ns.say("the wheel starts when this fight ends.") end
 end
@@ -256,11 +256,11 @@ local function help()
         ground = "For a ground marker, hold " .. ns.keyText(ns.GROUND_BINDING) .. ", let go, then click the ground. "
     end
     ns.say("hold your key (" .. ns.keyText() .. "), move toward a marker and let go. " .. ground
-        .. "/flickmark opens the settings; /flickmark preview shows the wheel.")
+        .. "/snapmark opens the settings; /snapmark preview shows the wheel.")
 end
 
-SLASH_FLICKMARK1 = "/flickmark"
-SlashCmdList.FLICKMARK = function(msg)
+SLASH_SNAPMARK1 = "/snapmark"
+SlashCmdList.SNAPMARK = function(msg)
     local cmd = (msg or ""):lower():match("^%s*(%S*)")
     if cmd == "" or cmd == "options" or cmd == "settings" then
         if ns.openOptions then ns.openOptions() else help() end
@@ -268,13 +268,13 @@ SlashCmdList.FLICKMARK = function(msg)
         ns.togglePreview()
     elseif cmd == "debug" then
         ns.debug = not ns.debug
-        ns.say(ns.debug and "debug on: each press and release of the wheel is reported here. /flickmark debug again turns it off."
+        ns.say(ns.debug and "debug on: each press and release of the wheel is reported here. /snapmark debug again turns it off."
             or "debug off.")
     else
         help()
     end
 end
 
-function FlickMark_OnAddonCompartmentClick()
+function SnapMark_OnAddonCompartmentClick()
     if ns.openOptions then ns.openOptions() end
 end

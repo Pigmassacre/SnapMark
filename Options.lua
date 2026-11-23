@@ -1,5 +1,5 @@
--- The FlickMark page in the game's settings (Options > AddOns), through the Settings API, and the small window that
--- asks for a key. Every control is a proxy over FlickMarkDB and changes it through ns.set.
+-- The SnapMark page in the game's settings (Options > AddOns), through the Settings API, and the small window that
+-- asks for a key. Every control is a proxy over SnapMarkDB and changes it through ns.set.
 
 local _, ns = ...
 
@@ -41,7 +41,7 @@ local function refreshKeyButtons()
 end
 
 local function buildCatcher()
-    catcher = CreateFrame("Frame", "FlickMarkKeyCatcher", UIParent, "BackdropTemplate")
+    catcher = CreateFrame("Frame", "SnapMarkKeyCatcher", UIParent, "BackdropTemplate")
     catcher:SetSize(340, 132)
     catcher:SetPoint("CENTER", 0, 120)
     catcher:SetFrameStrata("FULLSCREEN_DIALOG")
@@ -122,12 +122,12 @@ end
 -- The page
 
 local function register()
-    category = Settings.RegisterVerticalLayoutCategory("FlickMark")
+    category = Settings.RegisterVerticalLayoutCategory("SnapMark")
     local createCheckbox = Settings.CreateCheckbox or Settings.CreateCheckBox
     local createDropdown = Settings.CreateDropdown or Settings.CreateDropDown
 
     local function check(key, label, tooltip)
-        local setting = Settings.RegisterProxySetting(category, "FLICKMARK_" .. key:upper(), Settings.VarType.Boolean,
+        local setting = Settings.RegisterProxySetting(category, "SNAPMARK_" .. key:upper(), Settings.VarType.Boolean,
             label, ns.DEFAULTS[key],
             function() return ns.db[key] and true or false end,
             function(value) ns.set(key, value and true or false) end)
@@ -135,7 +135,7 @@ local function register()
     end
 
     local function choice(key, label, options, tooltip)
-        local setting = Settings.RegisterProxySetting(category, "FLICKMARK_" .. key:upper(), Settings.VarType.String,
+        local setting = Settings.RegisterProxySetting(category, "SNAPMARK_" .. key:upper(), Settings.VarType.String,
             label, ns.DEFAULTS[key],
             function() return ns.db[key] end,
             function(value) ns.set(key, value) end)
@@ -147,7 +147,7 @@ local function register()
     end
 
     local function slider(key, label, lo, hi, step, tooltip)
-        local setting = Settings.RegisterProxySetting(category, "FLICKMARK_" .. key:upper(), Settings.VarType.Number,
+        local setting = Settings.RegisterProxySetting(category, "SNAPMARK_" .. key:upper(), Settings.VarType.Number,
             label, math.floor(ns.DEFAULTS[key] * 100 + 0.5),
             function() return math.floor(ns.db[key] * 100 + 0.5) end,
             function(value) ns.set(key, math.max(lo, math.min(hi, value)) / 100) end)
@@ -242,7 +242,7 @@ function ns.openOptions()
     if category then
         Settings.OpenToCategory(category:GetID())
     else
-        ns.say("this client has no settings page for addons. /flickmark preview shows the wheel.")
+        ns.say("this client has no settings page for addons. /snapmark preview shows the wheel.")
         ns.chooseKey()
     end
 end
