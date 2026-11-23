@@ -20,10 +20,18 @@ you point at in a fight too, turn on "Target what I point at, then mark it" (thi
 
 Marks go through Blizzard's own secure marker action, so there's nothing to switch on before a fight.
 
+## Ground markers
+
+Give MarkWheel a second key for ground markers. It opens the same wheel, with every marker in the same place, so
+there's nothing new to learn: hold the key, move toward a marker, let go, then click the ground where it goes.
+
+- **Picking a marker that's already down moves it.**
+- **Let go in the centre** to do nothing, or set it to remove all ground markers.
+
 ## Getting started
 
 MarkWheel has no key out of the box. Open **Options > AddOns > MarkWheel** (or type `/markwheel`), click **Wheel
-key** and press the key you want to hold.
+key** and press the key you want to hold. For ground markers, do the same with **Ground marker key**.
 
 ## Settings
 
@@ -35,6 +43,7 @@ key** and press the key you want to hold.
 - **Wheel size** and **Background**
 - **Marker names** in the middle of the wheel
 - **Sounds**: a soft tick when the choice changes and a click when a mark is set
+- **Ground marker key** and what letting go in the centre of the ground wheel does
 
 ## Commands
 
@@ -44,6 +53,7 @@ key** and press the key you want to hold.
 ## Good to know
 
 - In a party anyone can set marks. In a raid you need to be the leader or have assist; that's the game's rule.
+- Ground markers need a group.
 - Keys can't be changed during a fight. Choose your key outside combat.
 
 MarkWheel is free and open source under the MIT license.

@@ -3,7 +3,8 @@
 
 local _, ns = ...
 
-local category, keyButton, keyFrame
+local category
+local keyRows = {} -- binding -> { init = the button's initializer, frame = its row on screen }
 
 ----------------------------------------------------------------------------------------------------------------------
 -- Choosing the key
@@ -24,15 +25,18 @@ local function keyLabel(key)
 end
 
 -- The settings page draws a button's text when it builds the row; the row on screen gets the new key too.
-local function refreshKeyButton()
-    if not keyButton then return end
-    local data = keyButton.GetData and keyButton:GetData() or keyButton.data
-    local old = type(data) == "table" and data.buttonText
-    if type(data) == "table" then data.buttonText = ns.keyText() end
-    local b = keyFrame and keyFrame.Button
-    if b and b.GetText and b.SetText then
-        local ok, shown = pcall(b.GetText, b)
-        if ok and (shown == old or shown == ns.keyText()) then b:SetText(ns.keyText()) end
+local function refreshKeyButtons()
+    for binding, row in pairs(keyRows) do
+        local init = row.init
+        local data = init.GetData and init:GetData() or init.data
+        local old = type(data) == "table" and data.buttonText
+        local text = ns.keyText(binding)
+        if type(data) == "table" then data.buttonText = text end
+        local b = row.frame and row.frame.Button
+        if b and b.GetText and b.SetText then
+            local ok, shown = pcall(b.GetText, b)
+            if ok and (shown == old or shown == text) then b:SetText(text) end
+        end
     end
 end
 
@@ -54,7 +58,6 @@ local function buildCatcher()
 
     catcher.title = catcher:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     catcher.title:SetPoint("TOP", 0, -14)
-    catcher.title:SetText("Marker wheel key")
 
     catcher.text = catcher:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     catcher.text:SetPoint("TOP", catcher.title, "BOTTOM", 0, -10)
@@ -73,16 +76,20 @@ local function buildCatcher()
         if IsControlKeyDown() then combo = "CTRL-" .. combo end
         if IsShiftKeyDown() then combo = "SHIFT-" .. combo end
         local action = GetBindingAction(combo)
-        local other = action ~= "" and action ~= ns.BINDING and bindingLabel(action)
+        local other = action ~= "" and action ~= catcher.binding and bindingLabel(action)
         if other and catcher.confirm ~= combo then
             catcher.confirm = combo
             catcher.text:SetText(keyLabel(combo) .. " is used for " .. other
                 .. ".\nPress " .. keyLabel(combo) .. " again to use it for the wheel, or press another key.")
             return
         end
-        if ns.bindKey(combo) then
-            ns.say("hold " .. keyLabel(combo) .. ", move toward a marker and let go.")
-            refreshKeyButton()
+        if ns.bindKey(combo, catcher.binding) then
+            if catcher.binding == ns.GROUND_BINDING then
+                ns.say("hold " .. keyLabel(combo) .. ", move toward a marker, let go, then click the ground.")
+            else
+                ns.say("hold " .. keyLabel(combo) .. ", move toward a marker and let go.")
+            end
+            refreshKeyButtons()
             catcher:Hide()
         end
     end
@@ -95,14 +102,19 @@ local function buildCatcher()
     catcher:Hide()
 end
 
-function ns.chooseKey()
+-- binding: ns.BINDING (when left out) or ns.GROUND_BINDING.
+function ns.chooseKey(binding)
+    binding = binding or ns.BINDING
     if InCombatLockdown() then
         ns.say("keys can't change during a fight. Try again after it.")
         return
     end
     if not catcher then buildCatcher() end
-    catcher.confirm = nil
-    catcher.text:SetText("Press the key you want to hold for the wheel.\nNow: " .. ns.keyText())
+    catcher.binding, catcher.confirm = binding, nil
+    local ground = binding == ns.GROUND_BINDING
+    catcher.title:SetText(ground and "Ground marker wheel key" or "Marker wheel key")
+    catcher.text:SetText("Press the key you want to hold for the " .. (ground and "ground marker wheel" or "wheel")
+        .. ".\nNow: " .. ns.keyText(binding))
     catcher:Show()
 end
 
@@ -156,16 +168,22 @@ local function register()
         end
     end
 
-    keyButton = button("Wheel key", ns.keyText(), ns.chooseKey,
-        "The key you hold to open the wheel. Click, then press a key.")
-    -- Remember the row on screen as the page builds it, to change its text when the key changes.
-    if keyButton and type(keyButton.InitFrame) == "function" then
-        local init = keyButton.InitFrame
-        keyButton.InitFrame = function(self, frame, ...)
-            init(self, frame, ...)
-            keyFrame = frame
+    local function keyButton(binding, label, tooltip)
+        local init = button(label, ns.keyText(binding), function() ns.chooseKey(binding) end, tooltip)
+        if not init then return end
+        local row = { init = init }
+        keyRows[binding] = row
+        -- Remember the row on screen as the page builds it, to change its text when the key changes.
+        if type(init.InitFrame) == "function" then
+            local initFrame = init.InitFrame
+            init.InitFrame = function(self, frame, ...)
+                initFrame(self, frame, ...)
+                row.frame = frame
+            end
         end
     end
+
+    keyButton(ns.BINDING, "Wheel key", "The key you hold to open the wheel. Click, then press a key.")
 
     button("Preview", "Show", function() ns.togglePreview() end,
         "Shows the wheel in the middle of the screen to try out the size and look. Nothing gets marked.")
@@ -190,6 +208,18 @@ local function register()
     check("names", "Marker names", "Show the name of the marker you are about to set in the middle of the wheel.")
     check("sound", "Sounds", "A soft tick when the choice changes and a click when a mark is set.")
 
+    if ns.groundEnabled() then
+        local header = CreateSettingsListSectionHeaderInitializer
+            and SettingsPanel and SettingsPanel.GetLayout and CreateSettingsListSectionHeaderInitializer("Ground markers")
+        if header then SettingsPanel:GetLayout(category):AddInitializer(header) end
+        keyButton(ns.GROUND_BINDING, "Ground marker key",
+            "The key you hold to open the wheel for ground markers. Let go on a marker, then click the ground where "
+            .. "it goes. Picking a marker that's already down moves it. Click, then press a key.")
+        choice("groundCenter", header and "Let go in the centre" or "Ground: let go in the centre", {
+            { "none", "Nothing" }, { "clear", "Remove all ground markers" },
+        }, "What happens when you let go of the ground marker key without moving away from the centre.")
+    end
+
     Settings.RegisterAddOnCategory(category)
 
     if SettingsPanel and SettingsPanel.HookScript then
@@ -206,7 +236,7 @@ ns.On("LOGIN", function()
     end
 end)
 
-ns.On("UPDATE_BINDINGS", refreshKeyButton)
+ns.On("UPDATE_BINDINGS", refreshKeyButtons)
 
 function ns.openOptions()
     if category then

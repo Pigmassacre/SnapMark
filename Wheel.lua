@@ -159,8 +159,12 @@ local function who(first)
     return unit, note
 end
 
-local function canMark()
-    if IsInRaid and IsInRaid() then
+local function canMark(ground)
+    local raid = IsInRaid and IsInRaid()
+    if ground and not raid and IsInGroup and not IsInGroup() then
+        return false, "Ground markers need a group"
+    end
+    if raid then
         local lead = (UnitIsGroupLeader and ns.read(UnitIsGroupLeader, "player"))
             or (UnitIsGroupAssistant and ns.read(UnitIsGroupAssistant, "player"))
             or (IsEveryoneAssistant and ns.read(IsEveryoneAssistant))
@@ -174,7 +178,7 @@ end
 
 local function reset(preview)
     if not f then build() end
-    state.open, state.preview, state.closing = true, preview, nil
+    state.open, state.preview, state.closing, state.kind = true, preview, nil, "unit"
     state.t, state.sel, state.lastSel = 0, nil, nil
     state.wedgeRot, state.wedgeA, state.glowA, state.notchRot, state.notchA = 0, 0, 0, 0, 0
     state.grow = { 1, 1, 1, 1, 1, 1, 1, 1 }
@@ -187,28 +191,38 @@ local function reset(preview)
     paintBacking()
 end
 
--- From the secure snippet, on key down. first: it targeted what you point at.
-function Wheel.open(first)
+-- From the secure snippet, on key down. first: it targeted what you point at. kind: "unit" (the marker key) or
+-- "ground" (the ground marker key).
+function Wheel.open(first, kind)
     reset(false)
+    state.kind = kind == "ground" and "ground" or "unit"
     local s = ns.db.size
     state.ox, state.oy = cursor()
     local W, H = UIParent:GetWidth(), UIParent:GetHeight()
     local m = (R_OUT + 6) * s
     state.cx, state.cy = clamp(state.ox, m, W - m), clamp(state.oy, m + 34 * s, H - m)
 
-    local unit, note = who(first)
-    local exists = ns.read(UnitExists, unit)
-    local ok, reason = canMark()
-    if exists == false then
-        ok, reason = false, unit == "focus" and "No focus" or "No target"
+    local ok, reason, note
+    if state.kind == "ground" then
+        ok, reason = canMark(true)
+        note = "Then click where it goes"
+        f.unit:SetText("Ground marker")
+    else
+        local unit
+        unit, note = who(first)
+        local exists = ns.read(UnitExists, unit)
+        ok, reason = canMark(false)
+        if exists == false then
+            ok, reason = false, unit == "focus" and "No focus" or "No target"
+        end
+        if exists ~= false then
+            local okName, name = pcall(UnitName, unit)
+            f.unit:SetText(okName and name or "")
+        else
+            f.unit:SetText("")
+        end
     end
     state.available, state.reason = ok, reason
-    if exists ~= false then
-        local okName, name = pcall(UnitName, unit)
-        f.unit:SetText(okName and name or "")
-    else
-        f.unit:SetText("")
-    end
     f.unit:SetTextColor(1, 1, 1, 1)
     f.note:SetText(reason or note or "")
     if reason then f.note:SetTextColor(1, 0.45, 0.4, 1) else f.note:SetTextColor(0.75, 0.78, 0.8, 1) end
@@ -221,10 +235,11 @@ function Wheel.open(first)
 end
 
 -- From the secure snippet, on key up, Esc or right-click. how: "toggle", "set" or "clear" (a mark was set or taken
--- off), "none" (let go in the centre), "cancel", "lost" (what you pointed at is gone).
+-- off), "ground" (a ground marker is on its way: the game's targeting circle is up), "groundclear" (all ground markers
+-- removed), "none" (let go in the centre), "cancel", "lost" (what you pointed at is gone).
 function Wheel.close(how, marker)
     if not (f and f:IsShown()) or state.preview then return end
-    local marked = how == "toggle" or how == "set"
+    local marked = how == "toggle" or how == "set" or how == "ground"
     if marked and state.available then
         local i = ns.SLOT_OF[marker]
         state.closing = { kind = "mark", t = 0, dur = MARK_TIME, slot = i }
@@ -240,7 +255,7 @@ function Wheel.close(how, marker)
         state.closing = { kind = "fade", t = 0, dur = CLOSE_TIME }
         if how == "lost" and UIErrorsFrame then
             UIErrorsFrame:AddMessage("What you pointed at went out of sight before you let go, so nothing was marked.", 1, 0.3, 0.25)
-        elseif (marked or how == "clear") and state.reason and UIErrorsFrame then
+        elseif (marked or how == "clear" or how == "groundclear") and state.reason and UIErrorsFrame then
             UIErrorsFrame:AddMessage(state.reason, 1, 0.3, 0.25)
         end
     end
@@ -250,7 +265,7 @@ end
 local function keyStillDown()
     if not IsKeyDown then return nil end
     local any = nil
-    for _, binding in ipairs(ns.keys()) do
+    for _, binding in ipairs(ns.keys(state.kind == "ground" and ns.GROUND_BINDING or nil)) do
         local key = binding:match("([^%-]+)$")
         local down
         if key:match("^BUTTON%d+$") then

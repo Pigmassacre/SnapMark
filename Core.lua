@@ -6,15 +6,20 @@
 -- How marking works: addons may not call SetRaidTarget themselves. MarkWheel's key clicks a secure button
 -- (Secure.lua); a secure snippet reads the direction from an invisible frame much larger than the screen and hands
 -- the marker to Blizzard's own "raidtarget" button action. Wheel.lua only draws.
+--
+-- A second key opens the same wheel for ground markers: letting go hands the marker to Blizzard's "worldmarker"
+-- action, and the game's targeting circle then places it where you click.
 
 local ADDON, ns = ...
 
 ns.ADDON = ADDON
 ns.MEDIA = "Interface\\AddOns\\" .. ADDON .. "\\Media\\"
 ns.BINDING = "MARKWHEEL_HOLD"
+ns.GROUND_BINDING = "MARKWHEEL_GROUND"
 
 BINDING_HEADER_MARKWHEEL = "MarkWheel"
 BINDING_NAME_MARKWHEEL_HOLD = "Marker wheel (hold)"
+BINDING_NAME_MARKWHEEL_GROUND = "Ground marker wheel (hold)"
 
 ----------------------------------------------------------------------------------------------------------------------
 -- Settings
@@ -24,6 +29,7 @@ ns.DEFAULTS = {
     combat = "target",    -- in combat with "point": "target" (mark your target) or "targetfirst" (target what you
                           -- point at as you press, then mark it)
     center = "none",      -- letting go in the centre: "none", "skull", "clear"
+    groundCenter = "none", -- letting go in the centre of the ground wheel: "none", "clear" (all ground markers)
     size = 1.0,           -- wheel size, 0.7 to 1.5
     background = 0.85,    -- how solid the wheel's backing is, 0 to 1
     names = true,         -- the name of the marker you are about to set, in the centre
@@ -40,6 +46,7 @@ local function loadDB()
     if db.mode ~= "point" and db.mode ~= "target" and db.mode ~= "focus" then db.mode = "point" end
     if db.combat ~= "target" and db.combat ~= "targetfirst" then db.combat = "target" end
     if db.center ~= "none" and db.center ~= "skull" and db.center ~= "clear" then db.center = "none" end
+    if db.groundCenter ~= "none" and db.groundCenter ~= "clear" then db.groundCenter = "none" end
     if type(db.size) ~= "number" or db.size ~= db.size then db.size = 1 end
     db.size = math.max(0.7, math.min(1.5, db.size))
     if type(db.background) ~= "number" or db.background ~= db.background then db.background = 0.85 end
@@ -100,6 +107,30 @@ end
 
 function ns.markerIcon(marker)
     return "Interface\\TargetingFrame\\UI-RaidTargetingIcon_" .. marker
+end
+
+-- Ground markers are numbered differently from raid target markers (ground marker 1 is the square). The game's names
+-- for them carry their icons, so the order comes from there; if those can't be read, the order the game has always
+-- used.
+local GROUND_ORDER = { 6, 4, 3, 7, 1, 2, 5, 8 } -- ground marker index -> raid target marker shown
+
+function ns.groundMarkers()
+    local order, seen = {}, {}
+    for i = 1, 8 do
+        local name = _G["WORLD_MARKER" .. i]
+        local icon = type(name) == "string" and tonumber(name:match("RaidTargetingIcon_(%d)"))
+        if not icon or seen[icon] then order = GROUND_ORDER break end
+        order[i], seen[icon] = icon, true
+    end
+    local of = {}
+    for i, icon in ipairs(order) do of[icon] = i end
+    return of -- raid target marker -> ground marker index
+end
+
+-- Whether this realm has ground markers at all.
+function ns.groundEnabled()
+    if IsRaidMarkerSystemEnabled then return ns.read(IsRaidMarkerSystemEnabled) == true end
+    return PlaceRaidMarker ~= nil
 end
 
 ----------------------------------------------------------------------------------------------------------------------
@@ -174,24 +205,26 @@ end
 ----------------------------------------------------------------------------------------------------------------------
 -- The key
 
-function ns.keys()
-    return { GetBindingKey(ns.BINDING) }
+-- binding: ns.BINDING (the marker wheel, when left out) or ns.GROUND_BINDING.
+function ns.keys(binding)
+    return { GetBindingKey(binding or ns.BINDING) }
 end
 
-function ns.keyText()
-    local key = GetBindingKey(ns.BINDING)
+function ns.keyText(binding)
+    local key = GetBindingKey(binding or ns.BINDING)
     if not key then return "Not set" end
     return GetBindingText and GetBindingText(key) or key
 end
 
--- Binds key to the wheel, in place of any key it had, and saves the game's key bindings.
-function ns.bindKey(key)
+-- Binds key to a wheel, in place of any key it had, and saves the game's key bindings.
+function ns.bindKey(key, binding)
+    binding = binding or ns.BINDING
     if InCombatLockdown() then
         ns.say("keys can't change during a fight. Try again after it.")
         return false
     end
-    for _, old in ipairs(ns.keys()) do SetBinding(old) end
-    SetBinding(key, ns.BINDING)
+    for _, old in ipairs(ns.keys(binding)) do SetBinding(old) end
+    SetBinding(key, binding)
     SaveBindings(GetCurrentBindingSet())
     return true
 end
@@ -218,7 +251,11 @@ end
 -- Slash command
 
 local function help()
-    ns.say("hold your key (" .. ns.keyText() .. "), move toward a marker and let go. "
+    local ground = ""
+    if GetBindingKey(ns.GROUND_BINDING) then
+        ground = "For a ground marker, hold " .. ns.keyText(ns.GROUND_BINDING) .. ", let go, then click the ground. "
+    end
+    ns.say("hold your key (" .. ns.keyText() .. "), move toward a marker and let go. " .. ground
         .. "/markwheel opens the settings; /markwheel preview shows the wheel.")
 end
 

@@ -9,8 +9,10 @@ A raid target marker wheel for **World of Warcraft: Forever**. Hold a key, flick
   removes the mark, if you like). Esc or right-click cancels.
 - **Marks what you point at** when you press the key, else your target. In a fight it marks your target, or targets
   what you point at first if you turn that on.
+- **Ground markers on a second key.** The same wheel, with the markers in the same places: let go on one, then click
+  the ground where it goes. Picking a marker that's already down moves it.
 
-Settings: Options > AddOns > MarkWheel, or `/markwheel`. Choose the key there.
+Settings: Options > AddOns > MarkWheel, or `/markwheel`. Choose the keys there.
 
 ## Working on it
 

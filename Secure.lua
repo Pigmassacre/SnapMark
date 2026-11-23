@@ -14,6 +14,11 @@
 -- Who gets marked: out of combat, PreClick (ordinary addon code, which may set attributes outside a fight) works out
 -- which unit you pointed at when you pressed and puts it in "mw-unit". In combat it can't, so the snippet marks your
 -- target (or focus).
+--
+-- The ground marker key clicks the same button with "Ground" for a mouse button. The snippet remembers that in
+-- "mw-kind" on key down, and on key up arms Blizzard's "worldmarker" action instead: it calls PlaceRaidMarker with no
+-- position, so the game shows its targeting circle and the marker goes where you click. The snippet hands the click
+-- on as "LeftButton", so the action reads the same attributes either way.
 
 local _, ns = ...
 
@@ -25,13 +30,15 @@ local PAD_SIZE = 20000 -- UI units; larger than any screen in either direction f
 ----------------------------------------------------------------------------------------------------------------------
 -- The snippets. Restricted code: no tables, only the restricted environment's functions.
 
--- self: the button. button: "LeftButton" from the key, "Cancel" from Esc or right-click. down: key down or up.
+-- self: the button. button: "LeftButton" from the marker key, "Ground" from the ground marker key, "Cancel" from Esc or
+-- right-click. down: key down or up.
 local ON_CLICK = [[
     local pad = self:GetFrameRef("pad")
     if button == "Cancel" then
         self:SetAttribute("type", nil)
         self:SetAttribute("typerelease", nil)
         self:SetAttribute("mw-unit", nil)
+        self:SetAttribute("mw-kind", nil)
         if pad:IsShown() then
             pad:Hide()
             self:CallMethod("WheelClosed", "cancel")
@@ -40,17 +47,23 @@ local ON_CLICK = [[
     end
 
     if down then
+        local ground = button == "Ground"
         self:SetAttribute("type", nil)
         self:SetAttribute("typerelease", nil)
         local targetNow = self:GetAttribute("mw-targetnow")
         self:SetAttribute("mw-targetnow", nil)
-        if PlayerInCombat() then self:SetAttribute("mw-unit", nil) end
+        if PlayerInCombat() or ground then self:SetAttribute("mw-unit", nil) end
+        if ground then self:SetAttribute("mw-kind", "ground") else self:SetAttribute("mw-kind", nil) end
         pad:ClearAllPoints()
         pad:SetPoint("CENTER", "$cursor", 0, 0)
         pad:Show()
         self:SetBindingClick(true, "ESCAPE", self, "Cancel")
         self:SetBindingClick(true, "BUTTON2", self, "Cancel")
         local first = false
+        if ground then
+            self:CallMethod("WheelOpened", false, "ground")
+            return "LeftButton", true
+        end
         local inFight = PlayerInCombat() and self:GetAttribute("mw-mode") == "point"
             and self:GetAttribute("mw-combat") == "targetfirst"
         if (targetNow or inFight) and UnitExists("mouseover") then
@@ -58,7 +71,7 @@ local ON_CLICK = [[
             self:SetAttribute("type", "target")
             first = true
         end
-        self:CallMethod("WheelOpened", first)
+        self:CallMethod("WheelOpened", first, "unit")
         return nil, true
     end
 
@@ -75,18 +88,14 @@ local ON_CLICK = [[
     end
     pad:Hide()
 
-    local unit = self:GetAttribute("mw-unit")
-    self:SetAttribute("mw-unit", nil)
-    if not unit then
-        if self:GetAttribute("mw-mode") == "focus" then unit = "focus" else unit = "target" end
-    end
-
-    local marker, action
+    -- The marker the movement points at, as a raid target index; nil in the centre (or with no reading at all).
+    local best
     if dx then
         local dead = self:GetAttribute("mw-dead") or 16
         if dx * dx + dy * dy >= dead * dead then
             local s = 0.70710678118654752
-            local best, top, d = 8, dy, 0
+            local top, d = dy, 0
+            best = 8
             d = (dx + dy) * s
             if d > top then best, top = 7, d end
             d = dx
@@ -101,14 +110,54 @@ local ON_CLICK = [[
             if d > top then best, top = 2, d end
             d = (dy - dx) * s
             if d > top then best, top = 1, d end
-            marker, action = best, "toggle"
-        else
-            local center = self:GetAttribute("mw-center")
-            if center == "skull" then
-                marker, action = 8, "set"
-            elseif center == "clear" then
-                marker, action = 8, "clear"
+        end
+    end
+
+    local kind = self:GetAttribute("mw-kind")
+    self:SetAttribute("mw-kind", nil)
+    if kind == "ground" then
+        self:SetAttribute("mw-unit", nil)
+        local action
+        if best then
+            action = "set"
+            self:SetAttribute("marker", self:GetAttribute("mw-ground-" .. best))
+        elseif dx and self:GetAttribute("mw-groundcenter") == "clear" then
+            action = "clear"
+            self:SetAttribute("marker", nil)
+        end
+        if action then
+            self:SetAttribute("unit", "none")
+            self:SetAttribute("action", action)
+            self:SetAttribute("type", "worldmarker")
+            self:SetAttribute("typerelease", "worldmarker")
+            if best then
+                self:CallMethod("WheelClosed", "ground", best)
+            else
+                self:CallMethod("WheelClosed", "groundclear")
             end
+        else
+            self:SetAttribute("type", nil)
+            self:SetAttribute("typerelease", nil)
+            self:CallMethod("WheelClosed", "none")
+        end
+        return "LeftButton", true
+    end
+
+    local unit = self:GetAttribute("mw-unit")
+    self:SetAttribute("mw-unit", nil)
+    if not unit then
+        if self:GetAttribute("mw-mode") == "focus" then unit = "focus" else unit = "target" end
+    end
+
+    local marker, action
+    if best then
+        marker, action = best, "toggle"
+    elseif dx then
+        local center = self:GetAttribute("mw-center")
+        if center == "skull" then
+            marker, action = 8, "set"
+        elseif center == "clear" then
+            marker, action = 8, "clear"
         end
     end
 
@@ -249,18 +298,24 @@ function Secure.sync()
     button:SetAttribute("mw-combat", db.combat)
     button:SetAttribute("mw-center", db.center)
     button:SetAttribute("mw-dead", ns.deadZone())
+    button:SetAttribute("mw-groundcenter", db.groundCenter)
+    for marker, index in pairs(ns.groundMarkers()) do button:SetAttribute("mw-ground-" .. marker, index) end
     ClearOverrideBindings(owner)
-    for _, key in ipairs(ns.keys()) do
-        SetOverrideBindingClick(owner, true, key, button:GetName(), "LeftButton")
-        if not key:find("%-") then
-            for _, mod in ipairs(MODIFIERS) do
-                local action = GetBindingAction(mod .. key)
-                if action == nil or action == "" then
-                    SetOverrideBindingClick(owner, true, mod .. key, button:GetName(), "LeftButton")
+    local function bind(keys, which)
+        for _, key in ipairs(keys) do
+            SetOverrideBindingClick(owner, true, key, button:GetName(), which)
+            if not key:find("%-") then
+                for _, mod in ipairs(MODIFIERS) do
+                    local action = GetBindingAction(mod .. key)
+                    if action == nil or action == "" then
+                        SetOverrideBindingClick(owner, true, mod .. key, button:GetName(), which)
+                    end
                 end
             end
         end
     end
+    bind(ns.keys(), "LeftButton")
+    if ns.groundEnabled() then bind(ns.keys(ns.GROUND_BINDING), "Ground") end
 end
 
 function Secure.setup()
@@ -283,7 +338,7 @@ function Secure.setup()
     button:SetAttribute("pressAndHoldAction", true)
     button:SetFrameRef("pad", pad)
 
-    button.WheelOpened = function(_, first) ns.Wheel.open(first) end
+    button.WheelOpened = function(_, first, kind) ns.Wheel.open(first, kind) end
     button.WheelClosed = function(_, how, marker)
         Secure.trace("the wheel closed: %s%s", how, marker and (", marker " .. marker) or "")
         ns.Wheel.close(how, marker)
@@ -293,6 +348,11 @@ function Secure.setup()
     -- unit you pointed at.
     button:SetScript("PreClick", function(self, which, down)
         if which == "Cancel" then return end
+        if which == "Ground" then
+            Secure.pointed = nil
+            Secure.trace(down and "pressed the ground marker key" or "let go of the ground marker key")
+            return
+        end
         if down then
             Secure.pointed = Secure.capture()
             local c = Secure.pointed
@@ -340,5 +400,7 @@ ns.On("PLAYER_REGEN_ENABLED", function()
 end)
 ns.On("UPDATE_BINDINGS", function() Secure.sync() end)
 ns.On("SETTING", function(key)
-    if key == "mode" or key == "combat" or key == "center" or key == "size" then Secure.sync() end
+    if key == "mode" or key == "combat" or key == "center" or key == "groundCenter" or key == "size" then
+        Secure.sync()
+    end
 end)

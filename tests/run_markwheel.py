@@ -9,7 +9,9 @@ The stand-in follows Blizzard's secure code where MarkWheel depends on it (wow-u
     with "$cursor" places by the pointer, as in RestrictedFrames.lua.
   - A click runs PreClick, then the wrapped OnClick snippet, then Blizzard's action button with its press-and-hold
     rule ("type" on key down, "typerelease" on key up), then the snippet after it, as in SecureHandlers.lua and
-    SecureTemplates.lua. The "raidtarget" and "target" actions work as Blizzard's do.
+    SecureTemplates.lua. The "raidtarget", "worldmarker" and "target" actions work as Blizzard's do; an action whose
+    unit doesn't exist is dropped, as there.
+  - PlaceRaidMarker with no position puts up the game's targeting circle; clickGround() places the marker.
   - In combat, addon code that touches protected frames, attributes or override bindings raises an error, as the game
     blocks it. Hidden values (mob names and GUIDs in instances) refuse to be compared or joined.
 
@@ -270,8 +272,9 @@ function UnitTokenFromGUID(guid)
     end
     if ent("mouseover") and ent("mouseover").guid == guid then return "mouseover" end
 end
-inRaid, isLeader = false, false
+inRaid, isLeader, inGroup = false, false, false
 function IsInRaid() return inRaid end
+function IsInGroup() return inGroup or inRaid end
 function UnitIsGroupLeader() return isLeader end
 function UnitIsGroupAssistant() return false end
 function IsEveryoneAssistant() return false end
@@ -293,6 +296,32 @@ function removePlate(token)
     world[token] = nil
     plates[token] = nil
     fireEvent("NAME_PLATE_UNIT_REMOVED", token)
+end
+
+----------------------------------------------------------------------------------------------------------------------
+-- Ground markers. Numbered as in the game: ground marker 1 is the blue square.
+
+groundEnabled = true
+function IsRaidMarkerSystemEnabled() return groundEnabled end
+local groundIcons = { 6, 4, 3, 7, 1, 2, 5, 8 }
+for i, icon in ipairs(groundIcons) do
+    _G["WORLD_MARKER" .. i] = "|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_" .. icon .. ":14:14|t Marker " .. i
+end
+function groundIcon(index) return groundIcons[index] end
+groundMarks = {}   -- ground marker index -> true while it's down
+placing = nil      -- the ground marker the targeting circle is placing
+function PlaceRaidMarker(index, token)
+    if secureDepth == 0 then error("PlaceRaidMarker is protected", 2) end
+    assert(token == nil, "the wheel places by the targeting circle")
+    placing = index
+end
+function ClearRaidMarker(index)
+    if secureDepth == 0 then error("ClearRaidMarker is protected", 2) end
+    if index == nil then groundMarks = {} else groundMarks[index] = nil end
+end
+function IsRaidMarkerActive(index) return groundMarks[index] or false end
+function clickGround()
+    if placing then groundMarks[placing] = true placing = nil end
 end
 
 ----------------------------------------------------------------------------------------------------------------------
@@ -484,6 +513,18 @@ local function perform(btn, actionType, down)
         elseif action == "toggle" then
             if marks[e] == marker then marks[e] = nil else marks[e] = marker end
         end
+    elseif actionType == "worldmarker" then
+        -- SECURE_ACTIONS.worldmarker
+        local marker = tonumber(btn._attrs.marker)
+        local action = btn._attrs.action or "toggle"
+        if action == "set" then
+            PlaceRaidMarker(marker or 1)
+        elseif action == "clear" then
+            ClearRaidMarker(marker)
+        elseif action == "toggle" then
+            marker = marker or 1
+            if IsRaidMarkerActive(marker) then ClearRaidMarker(marker) else PlaceRaidMarker(marker) end
+        end
     elseif actionType == "target" then
         world.target = world[unit]
         targetChanges = targetChanges + 1
@@ -532,7 +573,10 @@ function key(k, down)
         return "override"
     end
     local action = bindings[k]
-    if action == "MARKWHEEL_HOLD" then MarkWheel_OnBinding(down and "down" or "up") return "binding" end
+    if action == "MARKWHEEL_HOLD" or action == "MARKWHEEL_GROUND" then
+        MarkWheel_OnBinding(down and "down" or "up")
+        return "binding"
+    end
     return nil
 end
 
@@ -615,7 +659,8 @@ local function fresh()
     addPlate("nameplate2", brute)
     addPlate("nameplate3", mage)
     world.target = skull
-    inCombat, inRaid, isLeader = false, false, false
+    inCombat, inRaid, isLeader, inGroup = false, false, false, false
+    groundMarks, placing = {}, nil
     errors, uiErrors, sounds = {}, {}, {}
     cursorX, cursorY = 800, 500
 end
@@ -626,17 +671,18 @@ local function at(x, y) cursorX, cursorY = x * uiScale, y * uiScale end
 -- Hold the key at (x, y), move to (x + dx, y + dy), let go. In UI units.
 local function flick(x, y, dx, dy, opts)
     opts = opts or {}
+    local k = opts.key or "V"
     at(x, y)
     if opts.pointAt ~= nil then world.mouseover = opts.pointAt or nil end
-    keysDown.V = true
-    key("V", true)
+    keysDown[k] = true
+    key(k, true)
     tick(0.05)
     if opts.leave ~= nil then world.mouseover = opts.leave or nil end
     if opts.midway then opts.midway() end
     at(x + dx, y + dy)
     tick(0.05)
-    keysDown.V = false
-    key("V", false)
+    keysDown[k] = false
+    key(k, false)
     tick(0.4)
 end
 
@@ -935,6 +981,104 @@ sounds = {}
 flick(800, 500, 200, 0)
 check(#sounds == 0, "sounds off means silence")
 ns.set("sound", true)
+
+-- 15. The ground marker wheel: same wheel, same places, a ground marker placed by the game's targeting circle
+fresh()
+inGroup = true
+check(ns.bindKey("B", ns.GROUND_BINDING), "binding B to the ground marker wheel")
+check(bindings.B == "MARKWHEEL_GROUND" and bindings.V == "MARKWHEEL_HOLD", "each wheel has its own key")
+check(overrideFor("B") and overrideFor("B").button == "Ground", "B should click the button as Ground")
+check(overrideFor("SHIFT-B") and overrideFor("SHIFT-B").button == "Ground", "Shift-B opens the ground wheel too")
+for i, slot in ipairs(ns.SLOTS) do
+    flick(800, 500, slot.x * 150, slot.y * 150, { key = "B", pointAt = brute })
+    check(placing and groundIcon(placing) == slot.marker,
+        "the " .. slot.name .. " slice should place the " .. slot.name .. " ground marker, got " .. tostring(placing))
+    check(not overrideFor("ESCAPE"), "Esc is back to normal for the targeting circle")
+    clickGround()
+end
+noErrors("ground markers")
+local down = 0
+for _ in pairs(groundMarks) do down = down + 1 end
+check(down == 8, "all eight ground markers should be down")
+check(next(marks) == nil and world.target == skull, "the ground wheel marks no unit and leaves your target alone")
+check(ns.Wheel.state.kind == "ground" and MarkWheelWheel.unit._text == "Ground marker", "the wheel says it's for ground markers")
+-- The wheel and the snippet agree here too
+local gmis = 0
+for a = 0, 359, 15 do
+    for _, r in ipairs({ 20, 90, 500 }) do
+        local dx, dy = r * math.cos(math.rad(a)), r * math.sin(math.rad(a))
+        placing = nil
+        flick(800, 500, dx, dy, { key = "B" })
+        if not (placing and groundIcon(placing) == ns.SLOTS[ns.pick(dx, dy)].marker) then gmis = gmis + 1 end
+    end
+end
+check(gmis == 0, gmis .. " ground flicks disagree with the wheel")
+placing = nil
+-- The centre: nothing, or remove them all
+flick(800, 500, 3, 2, { key = "B" })
+check(placing == nil and next(groundMarks) ~= nil, "letting go in the centre does nothing")
+ns.set("groundCenter", "clear")
+flick(800, 500, 3, 2, { key = "B" })
+check(next(groundMarks) == nil and placing == nil, "with remove all, the centre removes every ground marker")
+ns.set("groundCenter", "none")
+-- In a fight
+inCombat = true
+fireEvent("PLAYER_REGEN_DISABLED")
+flick(800, 500, -150, 0, { key = "B", pointAt = brute })
+noErrors("ground markers in combat")
+check(placing and groundIcon(placing) == 2, "the ground wheel works in a fight")
+placing = nil
+inCombat = false
+fireEvent("PLAYER_REGEN_ENABLED")
+-- Esc cancels
+at(800, 500)
+key("B", true)
+at(800, 700)
+key("ESCAPE", true)
+key("B", false)
+tick(0.3)
+check(placing == nil and not overrideFor("ESCAPE"), "Esc cancels the ground wheel")
+-- The marker key still marks
+flick(800, 500, 0, 150, { pointAt = false })
+check(marks[skull] == 8 and placing == nil, "the marker wheel still marks after the ground wheel")
+-- On your own, and in a raid without assist
+fresh()
+at(800, 500)
+key("B", true)
+tick(0.05)
+check(ns.Wheel.state.available == false and ns.Wheel.state.reason:find("group"), "alone, the ground wheel says it needs a group")
+key("B", false)
+tick(0.3)
+inRaid = true
+at(800, 500)
+key("B", true)
+tick(0.05)
+check(ns.Wheel.state.reason and ns.Wheel.state.reason:find("leader"), "in a raid without assist the ground wheel says why")
+key("B", false)
+tick(0.3)
+placing = nil
+inRaid = false
+-- A release that never came: the wheel watches the ground key, not the marker key
+inGroup = true
+keysDown.B = true
+at(800, 500)
+key("B", true)
+tick(0.2)
+check(ns.Secure.isOpen(), "the ground wheel stays open while B is held")
+keysDown.B = false
+tick(0.2)
+check(not ns.Secure.isOpen(), "and closes when B is found up")
+-- A realm without ground markers: the key does nothing of the wheel's
+groundEnabled = false
+ns.Secure.sync()
+check(not overrideFor("B"), "without ground markers the ground key isn't taken")
+groundEnabled = true
+ns.Secure.sync()
+check(overrideFor("B"), "back")
+-- The help line names the ground key
+local before = #chat
+SlashCmdList.MARKWHEEL("help")
+check(chat[before + 1]:find("click the ground"), "help mentions the ground key")
 noErrors("end")
 return ruleTries
 """
@@ -978,6 +1122,19 @@ assert(overrideFor("G") and not overrideFor("V"), "G should click the button, V 
 keyInit.data.buttonClick()
 MarkWheelKeyCatcher._scripts.OnKeyDown(MarkWheelKeyCatcher, "V")
 assert(bindings.V == "MARKWHEEL_HOLD", "back to V")
+-- The ground marker key has its own button and the same key window
+local groundInit = settingsButtons[3]
+assert(groundInit.data.name == "Ground marker key", "the third button should be the ground marker key")
+assert(groundInit.data.buttonText == "B", "it shows B, shows " .. tostring(groundInit.data.buttonText))
+local groundRow = settingsRow(groundInit)
+groundInit.data.buttonClick()
+assert(MarkWheelKeyCatcher.title._text == "Ground marker wheel key", "the key window names the ground wheel")
+MarkWheelKeyCatcher._scripts.OnKeyDown(MarkWheelKeyCatcher, "V")
+assert(bindings.V == "MARKWHEEL_HOLD" and MarkWheelKeyCatcher.text._text:find("Marker wheel"),
+    "V is the marker wheel's: it asks first")
+MarkWheelKeyCatcher._scripts.OnKeyDown(MarkWheelKeyCatcher, "N")
+assert(bindings.N == "MARKWHEEL_GROUND" and bindings.B == nil and bindings.V == "MARKWHEEL_HOLD", "N replaces B")
+assert(groundRow.Button._text == "N" and row.Button._text == "V", "each row shows its own key")
 -- Preview
 settingsButtons[2].data.buttonClick()
 assert(ns.Wheel.isPreview(), "Preview should show the wheel")
@@ -1202,24 +1359,26 @@ def snapshots(outdir):
     g = lua.globals()
     lua.execute("""
         SetBinding("V", "MARKWHEEL_HOLD")
+        SetBinding("B", "MARKWHEEL_GROUND")
+        inGroup = true
         world.player = { guid = "Player-1", name = "Olof" }
         addPlate("nameplate1", { guid = "Creature-1", name = "Defias Pillager", mob = true })
         world.target = world.nameplate1
     """)
     crop = (420, 380, 20)
 
-    def hold(dx, dy, t, name, extra=""):
+    def hold(dx, dy, t, name, extra="", k="V"):
         lua.execute(f"""
             cursorX, cursorY = 800, 500
-            key("V", true)
+            key("{k}", true)
             {extra}
             cursorX, cursorY = 800 + ({dx}), 500 + ({dy})
             tick({t})
         """)
         draw(lua, os.path.join(outdir, name), crop=crop, background=ground)
 
-    def let_go(t, name):
-        lua.execute(f'key("V", false) tick({t})')
+    def let_go(t, name, k="V"):
+        lua.execute(f'key("{k}", false) tick({t})')
         if name:
             draw(lua, os.path.join(outdir, name), crop=crop, background=ground)
 
@@ -1239,6 +1398,9 @@ def snapshots(outdir):
     lua.execute("MarkWheelDB.size = 1.3 MarkWheelDB.background = 0.4")
     hold(-200, 90, 0.3, "large_light.png")
     let_go(0.4, None)
+    lua.execute("MarkWheelDB.size = 1 MarkWheelDB.background = 0.85")
+    hold(-140, 150, 0.3, "ground.png", k="B")
+    let_go(0.4, None, k="B")
 
 
 def main():
